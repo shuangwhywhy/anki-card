@@ -1,0 +1,20 @@
+/* components/card-header/display-header/display-header.css */
+
+/* 整体容器 */
+.display-header-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  max-width: 100%;
+  padding: 8px;
+  overflow: hidden;
+}
+
+/* 单词展示，自动适配字号，单行显示 */
+.display-word {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: bold;
+  text-align: center;
+}

@@ -1,0 +1,161 @@
+/* components/card-header/fill-in-header/fill-in-header.css */
+
+/* Overall container */
+.fill-in-header-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding-top: 20px;
+}
+
+/* question-block: 上下两块，宽度自适应 */
+.question-block {
+  display: flex;
+  flex-direction: column;
+  max-width: 100%;
+}
+
+/* question-line: 分左右两块 */
+.question-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  white-space: nowrap;
+  width: auto;
+}
+
+/* left-part: 包含 letter-line 和 answer-line */
+.left-part {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+/* right-part: 放提交按钮 */
+.right-part {
+  display: flex;
+  align-items: flex-start;
+}
+
+/* letter-line: 主字母行，动态 font-size 控制 */
+.letter-line {
+  display: inline-flex;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+/* answer-line: 正确答案行，紧贴题干 */
+.answer-line {
+  display: inline-flex;
+  gap: 2px;
+  white-space: nowrap;
+  margin-top: 4px;
+}
+
+/* 字母样式 */
+.letter {
+  font-weight: bold;
+  text-align: center;
+  display: inline-block;
+  min-width: 1ch;
+  vertical-align: baseline;
+}
+
+/* 给出的字母: 黑色, 无下划线 */
+.letter.given {
+  color: black;
+  border-bottom: none;
+}
+
+/* 空缺字母: 默认改为黑色, 有黑色下划线 */
+.letter.blank {
+  color: black;
+  border-bottom: 2px solid black;
+  position: relative;
+}
+
+/* 如果提交后错误，添加 error 类变成红色 */
+.letter.blank.error {
+  color: red;
+}
+
+/* 聚焦时显示闪烁光标 (放在下方) */
+.letter.blank:focus::after {
+  content: "";
+  display: inline-block;
+  width: 1px;
+  height: 1em;
+  background: black;
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  animation: blink-caret 1s infinite step-start;
+}
+
+@keyframes blink-caret {
+
+  0%,
+  50% {
+    opacity: 1;
+  }
+
+  50.1%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/* answer-line 字母: 与题干同样大小, 无下划线 */
+.letter-answer {
+  font-weight: bold;
+  text-align: center;
+  display: inline-block;
+  min-width: 1ch;
+  border-bottom: none;
+}
+
+/* 提交按钮: 默认使用您提供的 SVG 图标，背景和边框去除 */
+.submit-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: transparent;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.3s;
+}
+
+.submit-btn:hover {
+  transform: scale(1.1);
+}
+
+/* 定义区 */
+.definition-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin: 24px 0px;
+}
+
+.definition-cn,
+.definition-en {
+  font-size: 1.2em;
+  font-weight: bold;
+  text-align: center;
+}
+
+.definition-cn {
+  color: #0d47a1;
+}
+
+.definition-en {
+  color: #42a5f5;
+}

@@ -30,14 +30,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const externalNext = document.getElementById("external-next");
   const card = document.querySelector("anki-card");
 
-  // 确保 anki-card.js 中保留 showPrev() / showNext() 以供调用
   if (externalPrev && card && typeof card.showPrev === "function") {
-    externalPrev.addEventListener("roundButtonClick", () => {
+    externalPrev.addEventListener("click", () => {
       card.showPrev();
     });
   }
   if (externalNext && card && typeof card.showNext === "function") {
-    externalNext.addEventListener("roundButtonClick", () => {
+    externalNext.addEventListener("click", () => {
       card.showNext();
     });
   }
@@ -65,7 +64,7 @@ async function initializeLearningSetGlobal() {
 }
 
 /**
- * 大上传区域
+ * 处理大上传区域的 CSV 上传
  */
 async function handleBigUpload(e) {
   const file = e.target.files[0];
@@ -75,7 +74,7 @@ async function handleBigUpload(e) {
 }
 
 /**
- * CSV 上传并更新学习集
+ * CSV 上传并更新学习集（仅该 CSV 的全部词汇）
  */
 async function handleCsvUpload(file) {
   const csvText = await file.text();

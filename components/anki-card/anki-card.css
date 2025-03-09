@@ -74,16 +74,16 @@
 
 .definition-cn {
   font-size: 1.1em;
+  font-weight: bold;
   color: #0d47a1;
-  /* 中文释义：深蓝色 */
-  margin-top: 24px;
+  margin-top: 12px;
 }
 
 .definition-en {
   font-size: 1em;
+  font-weight: bold;
   color: #42a5f5;
-  /* 英文释义：亮蓝色 */
-  margin-top: 8px;
+  /* margin-top 已移除 */
 }
 
 .synonyms-row {
@@ -108,7 +108,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin-top: 8px;
+  /* margin-top 已移除 */
   text-align: left;
 }
 
@@ -125,7 +125,7 @@
 .examples {
   display: flex;
   flex-direction: column;
-  margin-top: 20px;
+  margin-top: 24px;
   padding: 8px;
   border-left: 3px solid #2196f3;
   background: linear-gradient(135deg, rgba(227, 242, 253, 0.8), rgba(187, 222, 251, 0.8));
@@ -173,4 +173,92 @@
   width: 24px;
   height: 24px;
   fill: white;
+}
+
+/* 刷新按钮：卡片内的刷新按钮改为全透明，仅显示图标，尺寸为30px */
+.card-refresh-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.3s, opacity 0.3s;
+}
+
+.card-refresh-btn .icon {
+  width: 70%;
+  height: 70%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-refresh-btn .icon svg {
+  width: 100%;
+  height: 100%;
+  /* 设置图标颜色为白色，由外部控制 */
+  fill: white;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+  transition: fill 0.3s, transform 0.3s;
+}
+
+.card-refresh-btn:hover {
+  transform: scale(1.1);
+  opacity: 0.8;
+}
+
+/* 外部左右翻页按钮统一使用 .nav-btn 样式 */
+.nav-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.3s, color 0.3s;
+}
+
+.nav-btn .icon {
+  width: 80%;
+  height: 80%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-btn .icon svg {
+  width: 100%;
+  height: 100%;
+  fill: #333;
+  transition: fill 0.3s, transform 0.3s;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+.nav-btn:hover {
+  transform: scale(1.1);
+}
+
+.nav-btn:hover .icon svg {
+  fill: #1976d2;
+  transform: scale(1.1);
+}
+
+/* 移动端：屏幕宽小于600px时 */
+@media (max-width: 600px) {
+  #main-container {
+    flex-direction: column;
+    gap: 20px;
+  }
 }

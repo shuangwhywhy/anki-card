@@ -15,8 +15,8 @@ body {
   background-size: 800% 800%;
   animation: gradientFlow 16s ease infinite;
 
-  display: flex;
   /* 居中 main-container */
+  display: flex;
   justify-content: center;
   align-items: center;
 }
@@ -36,25 +36,23 @@ body {
   }
 }
 
-/* ============ 主容器：Flex布局(左箭头, 卡片, 右箭头) ============ */
+/* ============ 主容器：Flex布局(左按钮, 卡片, 右按钮) ============ */
 #main-container {
   width: 100%;
   max-width: 960px;
-  /* 当 showAnkiCard(true) -> display:flex */
-  /* 三个子元素: left arrow, anki-card, right arrow */
+  /* 左、中、右三列 */
+  display: flex;
   flex-direction: row;
   align-items: center;
-  /* 垂直居中 */
   justify-content: center;
-  /* 让三项整体居中 */
   gap: 30px;
-  /* 卡片与左右按钮之间的30px间隙 */
+  /* 卡片与按钮之间保持30px间隙 */
   position: relative;
   margin: 0 auto;
   padding: 20px;
 }
 
-/* 大上传区域 */
+/* ============ 大上传区域 ============ */
 .big-upload-area {
   position: absolute;
   inset: 0;
@@ -104,18 +102,51 @@ body {
   background: #1976d2;
 }
 
-/* ============ 优化左右按钮的毛玻璃 & 悬浮效果 ============ */
-/* 这里可使用 round-icon-button 的自定义CSS var (--rib-bg-color 等) */
-#external-prev,
-#external-next {
-  --rib-bg-color: rgba(255, 255, 255, 0.15);
-  --rib-hover-bg-color: rgba(255, 255, 255, 0.3);
-  --rib-border-color: rgba(255, 255, 255, 0.3);
-  --rib-backdrop-filter: blur(6px);
-  --rib-box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+/* ============ 外部左右翻页按钮样式 ============ */
+.nav-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: transparent;
+  /* 全透明背景，只显示 icon */
+  border: none;
+  box-shadow: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.3s, color 0.3s;
 }
 
-/* 移动端(小屏)时，改为上下排列 */
+/* 调整内部图标的尺寸为80% */
+.nav-btn .icon {
+  width: 80%;
+  height: 80%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 图标添加单一 drop-shadow */
+.nav-btn .icon svg {
+  width: 100%;
+  height: 100%;
+  fill: #333;
+  transition: fill 0.3s, transform 0.3s;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+/* 悬停效果：图标放大并颜色变化 */
+.nav-btn:hover {
+  transform: scale(1.1);
+}
+
+.nav-btn:hover .icon svg {
+  fill: #1976d2;
+  transform: scale(1.1);
+}
+
+/* ============ 移动端适配 ============ */
 @media (max-width: 600px) {
   #main-container {
     flex-direction: column;
