@@ -25,15 +25,14 @@ class RoundIconButton extends HTMLElement {
     `;
     this._label = "Button";
 
-    // 创建内部按钮元素
-    this._buttonElem = document.createElement("button");
+    // 创建内部按钮元素，使用 div 而非 button
+    this._buttonElem = document.createElement("div");
     this._buttonElem.classList.add("round-btn");
     this.updateClass();
-
     this.updateButtonContent();
     this.shadowRoot.appendChild(this._buttonElem);
 
-    // 监听点击，向外派发自定义事件
+    // 监听点击事件，向外派发自定义事件
     this._buttonElem.addEventListener("click", () => {
       this.dispatchEvent(
         new CustomEvent("roundButtonClick", {
@@ -58,7 +57,7 @@ class RoundIconButton extends HTMLElement {
   }
 
   updateClass() {
-    // 重置内部按钮 class，保留 round-btn
+    // 重置内部按钮的 class，保留 round-btn
     this._buttonElem.className = "round-btn";
     // 将宿主元素的 class（排除 round-icon-button 本身）复制到内部按钮
     const hostClasses = this.className
@@ -70,6 +69,7 @@ class RoundIconButton extends HTMLElement {
   }
 
   updateButtonContent() {
+    // 保证 div 内部包含一个用于显示 icon 的容器
     this._buttonElem.innerHTML = `<div class="icon-slot">${this._icon}</div>`;
     this._buttonElem.setAttribute("title", this._label);
   }

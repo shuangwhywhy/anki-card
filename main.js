@@ -11,7 +11,7 @@ document.addEventListener("DOMContentLoaded", () => {
     bigUploadInput.addEventListener("change", handleBigUpload);
   }
 
-  // 监听菜单组件 fileSelected
+  // 监听菜单组件 fileSelected 事件
   document.addEventListener("fileSelected", async (e) => {
     const file = e.detail.file;
     if (!file) return;
@@ -19,27 +19,48 @@ document.addEventListener("DOMContentLoaded", () => {
     await handleCsvUpload(file);
   });
 
-  // 监听菜单组件 refreshVocab
+  // 监听菜单组件 refreshVocab 事件
   document.addEventListener("refreshVocab", () => {
-    console.log("refreshVocab -> re-init global set");
+    console.log("refreshVocab -> re-initialize global set");
     initializeLearningSetGlobal();
   });
+
+  // 绑定外部左右翻页按钮
+  const externalPrev = document.getElementById("external-prev");
+  const externalNext = document.getElementById("external-next");
+  const card = document.querySelector("anki-card");
+
+  // 确保 anki-card.js 中保留 showPrev() / showNext() 以供调用
+  if (externalPrev && card && typeof card.showPrev === "function") {
+    externalPrev.addEventListener("roundButtonClick", () => {
+      card.showPrev();
+    });
+  }
+  if (externalNext && card && typeof card.showNext === "function") {
+    externalNext.addEventListener("roundButtonClick", () => {
+      card.showNext();
+    });
+  }
 });
 
 /**
- * 启动时：若 DB 有数据则抽50，否则显示大上传区域
+ * 启动时：从 entire DB 随机抽 50 个词汇
  */
 async function initializeLearningSetGlobal() {
-  const words = await getRandomVocabulary(50);
-  console.log("Global random words:", words);
+  try {
+    const words = await getRandomVocabulary(50);
+    console.log("Global random words:", words);
 
-  if (words.length === 0) {
-    showBigUploadArea(true);
-    showAnkiCard(false);
-  } else {
-    showBigUploadArea(false);
-    showAnkiCard(true);
-    updateAnkiCard(words);
+    if (words.length === 0) {
+      showBigUploadArea(true);
+      showAnkiCard(false);
+    } else {
+      showBigUploadArea(false);
+      showAnkiCard(true);
+      updateAnkiCard(words);
+    }
+  } catch (err) {
+    console.error("Global init error:", err);
   }
 }
 
@@ -54,7 +75,7 @@ async function handleBigUpload(e) {
 }
 
 /**
- * CSV 上传 -> DB -> 只显示该CSV的全部词汇
+ * CSV 上传并更新学习集
  */
 async function handleCsvUpload(file) {
   const csvText = await file.text();
@@ -99,5 +120,5 @@ function showBigUploadArea(show) {
 function showAnkiCard(show) {
   const mainContainer = document.getElementById("main-container");
   if (!mainContainer) return;
-  mainContainer.style.display = show ? "block" : "none";
+  mainContainer.style.display = show ? "flex" : "none";
 }

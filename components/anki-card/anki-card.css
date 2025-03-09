@@ -1,6 +1,5 @@
 /* components/anki-card/anki-card.css */
 
-/* 卡片整体容器 */
 .card-container {
   width: 400px;
   margin: 0 auto;
@@ -18,8 +17,7 @@
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow:
-    0 4px 8px rgba(0, 0, 0, 0.2),
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2),
     0 8px 16px rgba(0, 0, 0, 0.15),
     0 16px 32px rgba(0, 0, 0, 0.1);
   position: relative;
@@ -30,28 +28,12 @@
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
-/* 顶部单词 */
 .word-section {
   font-size: 1.8em;
   text-align: center;
   font-weight: bold;
 }
 
-/* 翻页按钮区域 */
-.nav-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-}
-
-/* 刷新按钮：右上角绝对定位 */
-#btn-refresh {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-}
-
-/* 详情区域 */
 .details-section {
   background-color: rgba(255, 255, 255, 0.65);
   border-radius: 8px;
@@ -67,7 +49,109 @@
   display: none;
 }
 
-/* 底部“展开更多”交互区 */
+.detail-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detail-row.inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  margin-top: 2px;
+}
+
+.phonetic {
+  font-size: 1.2em;
+  color: #009688;
+}
+
+.pos {
+  font-size: 1.2em;
+  color: #e91e63;
+}
+
+.definition-cn {
+  font-size: 1.1em;
+  color: #0d47a1;
+  /* 中文释义：深蓝色 */
+  margin-top: 24px;
+}
+
+.definition-en {
+  font-size: 1em;
+  color: #42a5f5;
+  /* 英文释义：亮蓝色 */
+  margin-top: 8px;
+}
+
+.synonyms-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 24px;
+  text-align: left;
+}
+
+.synonyms-label {
+  font-weight: bold;
+  color: #4caf50;
+}
+
+.synonyms {
+  font-size: 1em;
+  color: #388e3c;
+}
+
+.antonyms-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  text-align: left;
+}
+
+.antonyms-label {
+  font-weight: bold;
+  color: #f44336;
+}
+
+.antonyms {
+  font-size: 1em;
+  color: #d32f2f;
+}
+
+.examples {
+  display: flex;
+  flex-direction: column;
+  margin-top: 20px;
+  padding: 8px;
+  border-left: 3px solid #2196f3;
+  background: linear-gradient(135deg, rgba(227, 242, 253, 0.8), rgba(187, 222, 251, 0.8));
+}
+
+.examples .label {
+  font-weight: bold;
+  margin-bottom: 6px;
+  color: #2196f3;
+}
+
+.example-sentence {
+  cursor: pointer;
+  font-size: 0.95em;
+  color: #333;
+  border-bottom: 1px dotted #bbb;
+  padding-bottom: 4px;
+  transition: background 0.3s, color 0.3s;
+}
+
+.example-sentence:hover {
+  background-color: rgba(33, 150, 243, 0.1);
+  text-decoration: underline;
+  color: #1976d2;
+}
+
 .expand-more {
   width: 90%;
   margin: 0 auto;

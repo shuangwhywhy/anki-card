@@ -1,13 +1,12 @@
 // db.js
 console.log("db.js loaded");
 
+// IndexedDB 基本信息
 const DB_NAME = "ankiAppDB";
 const DB_VERSION = 1;
 const VOCAB_STORE = "vocabulary";
 
-/**
- * 打开数据库
- */
+// 打开数据库
 export function openDB() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
@@ -15,7 +14,7 @@ export function openDB() {
       const db = evt.target.result;
       if (!db.objectStoreNames.contains(VOCAB_STORE)) {
         const store = db.createObjectStore(VOCAB_STORE, { keyPath: "word" });
-        // 根据需求添加索引
+        // 基本索引（可根据需求增删）
         store.createIndex("pos", "pos", { unique: false });
         store.createIndex("phonetic", "phonetic", { unique: false });
         store.createIndex("chineseDefinition", "chineseDefinition", {
@@ -35,74 +34,96 @@ export function openDB() {
       console.log("IndexedDB open success");
       resolve(evt.target.result);
     };
-    req.onerror = (evt) => reject(evt.target.error);
+    req.onerror = (evt) => {
+      reject(evt.target.error);
+    };
   });
 }
 
-/**
- * 写入/更新词汇
- */
+// 写入/更新一条记录
 export async function addVocabulary(vocab) {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(VOCAB_STORE, "readwrite");
     const store = tx.objectStore(VOCAB_STORE);
-    const r = store.put(vocab);
+    const r = store.put(vocab); // 以 word 为主键，重复时覆盖
     r.onsuccess = () => resolve(true);
     r.onerror = (e) => reject(e.target.error);
   });
 }
 
 /**
- * 导入 CSV（支持逗号、引号、多行例句）
+ * 中文表头 -> 系统字段映射
+ * 如需更多列名，请自行补充
+ */
+const headerMapping = {
+  单词: "word",
+  词性: "pos",
+  音标: "phonetic",
+  中文释义: "chineseDefinition",
+  英文释义: "englishDefinition",
+  同义词: "synonym",
+  反义词: "antonym",
+  例句: "sentences",
+};
+
+/**
+ * 导入 CSV：解析含引号、逗号、多行例句
+ * 使用中文表头映射 -> 系统字段
  */
 export async function importCSV(csvText, fileName) {
   console.log("importCSV -> file:", fileName);
+
   const rows = parseCSV(csvText);
   if (rows.length < 2) {
     console.log("CSV 行数不足2行");
     return;
   }
-  const headers = rows[0].map((h) => h.trim());
-  console.log("Parsed headers:", headers);
+  // 第 0 行表头
+  let rawHeaders = rows[0].map((h) => h.trim());
+  console.log("Parsed raw headers:", rawHeaders);
 
+  // 将中文表头映射为系统字段
+  const mappedHeaders = rawHeaders.map((header) => {
+    return headerMapping[header] || "";
+  });
+  console.log("mappedHeaders:", mappedHeaders);
+
+  // 其余行为数据
   for (let i = 1; i < rows.length; i++) {
     const cols = rows[i];
     if (!cols || cols.length === 0) continue;
     let vocab = {};
 
-    // 示例：0=word,1=pos,2=phonetic,3=chineseDef,4=englishDef,5=synonym,6=antonym,7=sentences
-    for (let c = 0; c < headers.length; c++) {
-      const colName = headers[c].toLowerCase();
-      const val = cols[c] || "";
-      if (colName.includes("word")) {
-        vocab.word = val;
-      } else if (colName.includes("pos")) {
-        vocab.pos = val;
-      } else if (colName.includes("phonetic") || colName.includes("音标")) {
-        vocab.phonetic = val;
-      } else if (colName.includes("中文")) {
-        vocab.chineseDefinition = val;
-      } else if (colName.includes("英文")) {
-        vocab.englishDefinition = val;
-      } else if (colName.includes("synonym") || colName.includes("同义")) {
-        vocab.synonym = splitByCommaOrSemicolon(val);
-      } else if (colName.includes("antonym") || colName.includes("反义")) {
-        vocab.antonym = splitByCommaOrSemicolon(val);
-      } else if (colName.includes("例句") || colName.includes("sentence")) {
-        // 多行例句 -> 用换行拆分
+    for (let c = 0; c < mappedHeaders.length; c++) {
+      const field = mappedHeaders[c];
+      if (!field) continue; // 未匹配的列跳过
+      let val = cols[c] || "";
+
+      if (field === "sentences") {
+        // 多行例句 -> 换行拆分
         vocab.sentences = val
           .split(/\r?\n/)
           .map((x) => x.trim())
           .filter(Boolean);
+      } else if (field === "synonym" || field === "antonym") {
+        // 同义词/反义词 -> 按逗号或分号拆分
+        vocab[field] = splitByCommaOrSemicolon(val);
+      } else {
+        // 普通字段
+        vocab[field] = val;
       }
     }
+
+    // 附加信息
     vocab.uploadFile = fileName;
     vocab.uploadTime = Date.now();
 
     if (vocab.word) {
       await addVocabulary(vocab);
       console.log("Inserted word:", vocab.word);
+    } else {
+      console.log("Skipped row, no 'word':", cols);
     }
   }
   console.log("importCSV done, total rows =", rows.length);
@@ -129,7 +150,9 @@ export async function getRandomVocabulary(limit = 50) {
       const randomIndices = [];
       while (randomIndices.length < numToFetch) {
         const r = Math.floor(Math.random() * total);
-        if (!randomIndices.includes(r)) randomIndices.push(r);
+        if (!randomIndices.includes(r)) {
+          randomIndices.push(r);
+        }
       }
       randomIndices.sort((a, b) => a - b);
 
@@ -183,6 +206,7 @@ export async function getAllWordsByFile(fileName) {
   });
 }
 
+/** 同义词/反义词拆分 */
 function splitByCommaOrSemicolon(str) {
   return str
     .split(/[;,]/)
@@ -190,10 +214,7 @@ function splitByCommaOrSemicolon(str) {
     .filter(Boolean);
 }
 
-/**
- * 解析逗号+引号包裹的 CSV
- * 支持多行例句
- */
+/** 解析逗号+引号包裹的 CSV，多行例句 */
 function parseCSV(text) {
   const rawLines = text.split(/\r?\n/);
   let finalLines = [];
@@ -218,6 +239,7 @@ function parseCSV(text) {
   return rows;
 }
 
+/** 逐字符解析一行，支持引号转义 "" */
 function parseCSVLine(line) {
   const result = [];
   let current = "";
@@ -226,7 +248,7 @@ function parseCSVLine(line) {
   for (let i = 0; i < line.length; i++) {
     const char = line[i];
     if (char === '"') {
-      // 转义 ""
+      // 遇到 ""
       if (inQuotes && i + 1 < line.length && line[i + 1] === '"') {
         current += '"';
         i++;
