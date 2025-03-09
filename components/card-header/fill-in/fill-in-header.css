@@ -1,0 +1,45 @@
+/* components/card-header/fill-in/fill-in-header.css */
+
+.fill-in-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 8px;
+}
+
+.word-display {
+  display: flex;
+  gap: 4px;
+  font-size: 2em;
+}
+
+.letter {
+  display: inline-block;
+  min-width: 20px;
+  text-align: center;
+  border-bottom: 2px solid black;
+}
+
+.letter.visible {
+  color: black;
+  border-bottom: none;
+}
+
+.letter.filled {
+  color: blue;
+}
+
+.letter.blank {
+  color: transparent;
+}
+
+.submit-button {
+  /* 提交按钮区域 */
+}
+
+.submit-button button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}

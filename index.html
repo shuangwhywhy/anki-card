@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="zh">
+  <head>
+    <meta charset="UTF-8" />
+    <title>ANKI 词汇记忆</title>
+    <link rel="stylesheet" href="global.css" />
+  </head>
+  <body>
+    <!-- 大上传区域：初次无数据时显示 -->
+    <div id="big-upload-area" class="big-upload-area hidden">
+      <div class="big-upload-content">
+        <h2>尚无数据，请上传 CSV 文件</h2>
+        <label for="bigCsvUpload" class="big-upload-label">选择文件</label>
+        <input type="file" id="bigCsvUpload" accept=".csv" />
+      </div>
+    </div>
+
+    <!-- 菜单组件（右上角） -->
+    <custom-menu></custom-menu>
+
+    <!-- 主容器：含 anki-card -->
+    <div id="main-container">
+      <anki-card></anki-card>
+    </div>
+
+    <!-- 脚本加载顺序 -->
+    <script type="module" src="db.js"></script>
+    <script type="module" src="components/menu/menu.js"></script>
+    <script
+      type="module"
+      src="components/round-icon-button/round-icon-button.js"
+    ></script>
+    <script type="module" src="components/anki-card/anki-card.js"></script>
+    <script type="module" src="main.js"></script>
+  </body>
+</html>

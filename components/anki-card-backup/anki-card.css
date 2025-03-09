@@ -1,0 +1,284 @@
+/* components/anki-card/anki-card.css */
+
+/* =========================
+   卡片整体外观（渐变半透明背景 + 毛玻璃效果）
+   ========================= */
+.card-container {
+  /* 使用您给出的多段渐变，倾斜 58度 */
+  background: linear-gradient(58deg,
+      rgba(255, 255, 255, 0.54) 0%,
+      rgba(255, 255, 255, 0.51) 25%,
+      rgba(255, 255, 255, 0.64) 28%,
+      rgba(255, 255, 255, 0.44) 42%,
+      rgba(255, 255, 255, 0.53) 45%,
+      rgba(255, 255, 255, 0.36) 72%,
+      rgba(255, 255, 255, 0.47) 75%,
+      rgba(255, 255, 255, 0.36) 100%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow:
+    0 4px 8px rgba(0, 0, 0, 0.2),
+    0 8px 16px rgba(0, 0, 0, 0.15),
+    0 16px 32px rgba(0, 0, 0, 0.1);
+  padding: 24px;
+  margin: 40px auto;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  /* 较大间隔：卡片主体块级分隔 */
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: #333;
+}
+
+/* =========================
+     题干部分
+     ========================= */
+.word-section {
+  font-size: 2.2em;
+  font-weight: bold;
+  text-align: center;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  color: #222;
+}
+
+/* =========================
+     选项部分
+     ========================= */
+.options-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  /* 中等间隔 */
+}
+
+.option {
+  padding: 12px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 50px;
+  background: rgba(255, 255, 255, 0.25);
+  /* 增加背景模糊处理 */
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+  font-size: 1.1em;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.option:hover,
+.option.hover {
+  background: rgba(205, 217, 110, 0.38);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.option.correct {
+  background-color: #4caf50;
+  border-color: #4caf50;
+  color: #fff;
+}
+
+.option.incorrect {
+  background-color: #f44336;
+  border-color: #f44336;
+  color: #fff;
+}
+
+/* =========================
+   按钮区域
+   ========================= */
+.button-section {
+  display: flex;
+  gap: 30px;
+  /* 增加按钮间隔 */
+  justify-content: center;
+}
+
+/* 通过卡片中定义的 class 为按钮添加差异化样式 */
+/* 第一个和第四个按钮：橙色系 */
+.round-btn.prev,
+.round-btn.next {
+  background-color: #ff9800;
+  /* 橙色 */
+}
+
+.round-btn.prev:hover,
+.round-btn.next:hover {
+  background-color: #fb8c00;
+  /* 深橙 */
+}
+
+/* 中间两个按钮：蓝色系 */
+.round-btn.detail,
+.round-btn.refresh {
+  background-color: #2196f3;
+  /* 蓝色 */
+}
+
+.round-btn.detail:hover,
+.round-btn.refresh:hover {
+  background-color: #1976d2;
+  /* 深蓝 */
+}
+
+/* 通用悬停效果：略微上移并增加阴影 */
+.round-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.35);
+}
+
+/* =========================
+     详情区域
+     ========================= */
+.details-section {
+  background-color: rgba(255, 255, 255, 0.65);
+  border-radius: 10px;
+  padding: 20px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  /* 中等间隔：详情区内各行分隔 */
+}
+
+.details-section.hidden {
+  display: none;
+}
+
+/* 通用详情行：默认较小间隔(8px) */
+.detail-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* 较小间隔 */
+}
+
+/* 第一行：音标与词性同行，margin-top: 2px */
+.detail-row.inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  /* 中等间隔 */
+  margin-top: 2px;
+  /* 第一行较小间隔 */
+}
+
+.phonetic {
+  font-size: 1.2em;
+  color: #009688;
+  /* 蓝绿色，与词性形成对比 */
+}
+
+.pos {
+  font-size: 1.2em;
+  color: #e91e63;
+  /* 词性颜色 */
+}
+
+/* 第二行：中文释义，margin-top: 24px */
+.definition-cn {
+  font-size: 1.1em;
+  color: #0d47a1;
+  /* 深蓝色 */
+  margin-top: 24px;
+}
+
+/* 第三行：英文释义，margin-top: 8px */
+.definition-en {
+  font-size: 1em;
+  color: #0d47a1;
+  /* 深蓝色 */
+  margin-top: 8px;
+}
+
+/* 第四行：近义词行，左对齐，margin-top: 24px */
+.synonyms-row {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 8px;
+  margin-top: 24px;
+  text-align: left;
+}
+
+.synonyms-label {
+  font-weight: bold;
+  color: #4caf50;
+  /* 绿色系 */
+  white-space: nowrap;
+}
+
+.synonyms {
+  font-size: 1em;
+  color: #388e3c;
+  /* 深绿色 */
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+/* 第五行：反义词行，左对齐，margin-top: 8px */
+.antonyms-row {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 8px;
+  margin-top: 8px;
+  text-align: left;
+}
+
+.antonyms-label {
+  font-weight: bold;
+  color: #f44336;
+  /* 红色系 */
+  white-space: nowrap;
+}
+
+.antonyms {
+  font-size: 1em;
+  color: #d32f2f;
+  /* 深红 */
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+/* 第六行：例句区域，margin-top: 20px */
+.examples {
+  display: flex;
+  flex-direction: column;
+  margin-top: 20px;
+  padding: 8px;
+  border-left: 3px solid #2196f3;
+  /* 左侧装饰 */
+  background: linear-gradient(135deg, rgba(227, 242, 253, 0.8), rgba(187, 222, 251, 0.8));
+}
+
+.examples .label {
+  font-weight: bold;
+  margin-bottom: 6px;
+  color: #2196f3;
+}
+
+.example-sentence {
+  cursor: pointer;
+  font-size: 0.95em;
+  color: #333;
+  border-bottom: 1px dotted #bbb;
+  padding-bottom: 4px;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* 例句悬停效果：仅更改背景和下划线提示，不放大 */
+.example-sentence:hover {
+  background-color: rgba(33, 150, 243, 0.1);
+  text-decoration: underline;
+  color: #1976d2;
+}

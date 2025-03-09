@@ -1,0 +1,24 @@
+/* components/round-icon-button/round-icon-button.css */
+.round-btn {
+  position: relative;
+  border: none;
+  border-radius: 50%;
+  width: 64px;
+  height: 64px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+  background-color: #666;
+  /* 基础背景色，具体颜色由外部覆盖 */
+}
+
+.icon-slot svg {
+  width: 30px;
+  height: 30px;
+  fill: white;
+  stroke: white;
+  stroke-width: 2;
+}

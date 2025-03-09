@@ -1,0 +1,64 @@
+/* components/menu/menu.css */
+
+.menu-container {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 999;
+}
+
+.menu-icon {
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #333;
+  transition: transform 0.3s ease;
+}
+
+.menu-container:hover .menu-icon {
+  transform: scale(1.1);
+}
+
+.menu-panel {
+  position: absolute;
+  top: 45px;
+  right: 0;
+  width: 160px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.menu-container:hover .menu-panel {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.menu-item {
+  padding: 8px 12px;
+  font-size: 14px;
+  color: #333;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+}
+
+.menu-item:last-child {
+  border-bottom: none;
+}
+
+.menu-item:hover {
+  background: #f0f0f0;
+}
+
+/* 隐藏系统 input */
+#menuCsvUpload {
+  display: none;
+}
