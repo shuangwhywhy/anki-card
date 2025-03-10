@@ -16,6 +16,21 @@
   word-wrap: break-word;
 }
 
+/* 新增：题干与选项之间的说明区域 */
+.choice-explanation {
+  text-align: center;
+  font-size: 1.2em;
+  color: #555;
+  margin-top: 12px;
+  margin-bottom: 20px;
+}
+
+/* 高亮说明词 */
+.choice-explanation .highlight {
+  font-weight: bold;
+  color: #d32f2f;
+}
+
 .options-container {
   display: flex;
   flex-direction: column;
@@ -23,6 +38,8 @@
   width: 100%;
   max-width: 400px;
   margin: 0 auto;
+  /* 增加顶部空白距离 */
+  margin-top: 20px;
 }
 
 .option {

@@ -53,9 +53,13 @@ class ChoiceHeader extends HTMLElement {
   }
 
   render() {
-    // 构建题干
+    // 生成说明文字
+    const explanation = this._getExplanation();
+
+    // 构建题干与说明文字
     let html = `<div class="choice-question">${this.questionText}</div>`;
-    // 构建选项
+    html += `<div class="choice-explanation">${explanation}</div>`;
+    // 构建选项区域
     html += `<div class="options-container">`;
     this.choices.forEach((opt, i) => {
       html += `<div class="option" data-idx="${i}">${opt}</div>`;
@@ -64,11 +68,54 @@ class ChoiceHeader extends HTMLElement {
 
     this._container.innerHTML = html;
 
-    // 绑定点击
+    // 绑定点击事件
     const optionEls = Array.from(this._container.querySelectorAll(".option"));
     optionEls.forEach((el) => {
       el.addEventListener("click", (e) => this._handleOptionClick(e));
     });
+  }
+
+  _getExplanation() {
+    // 根据当前题型返回说明文字及高亮部分
+    let text = "";
+    let highlight = "";
+    switch (this.questionType) {
+      case "word-chinese":
+        text = "Please choose the correct ";
+        highlight = "Chinese definition";
+        break;
+      case "word-english":
+        text = "Please choose the correct ";
+        highlight = "English definition";
+        break;
+      case "chinese-to-word":
+        text = "Please choose the correct word for the ";
+        highlight = "Chinese definition";
+        break;
+      case "english-to-word":
+        text = "Please choose the correct word for the ";
+        highlight = "English definition";
+        break;
+      case "synonym":
+        text = "Please choose the correct ";
+        highlight = "synonym";
+        break;
+      case "antonym":
+        text = "Please choose the correct ";
+        highlight = "antonym";
+        break;
+      case "sentence":
+        text = "Please choose the correct word to complete the ";
+        highlight = "sentence";
+        break;
+      default:
+        text = "Please choose the correct answer.";
+        highlight = "";
+    }
+    if (highlight) {
+      return `${text}<span class="highlight">${highlight}</span>.`;
+    }
+    return text;
   }
 
   _handleOptionClick(e) {

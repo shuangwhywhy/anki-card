@@ -98,7 +98,7 @@ class AnkiCard extends HTMLElement {
       this._detailVisible = this._questionType === "display";
     }
 
-    // 如果题型属于选择题（7种），调用 helper 生成最终题目数据，并传递给 header 组件
+    // 调用 helper 生成最终题目数据，并传递给 header 组件
     if (ALL_TYPES.includes(this._questionType)) {
       const questionData = generateChoiceQuestion(
         this._vocabulary,
