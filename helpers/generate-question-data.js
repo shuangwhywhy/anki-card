@@ -35,6 +35,8 @@ export const CHOICE_TYPES = [
 
 /**
  * 从整个学习集 entireVocabulary 中随机生成一道选择题。
+ * 如果传入 currentItem，则使用它作为主词条（即题目基于当前词）。
+ *
  * 数据来源为 CSV 导入，每个 item 至少包含：
  *    - word: string
  *    - chineseDefinition: string
@@ -47,18 +49,23 @@ export const CHOICE_TYPES = [
  *
  * @param {Array} entireVocabulary - 学习集数组
  * @param {string} [questionType] - 指定题型（若未指定，则随机选择 CHOICE_TYPES 中一种）
+ * @param {Object} [currentItem] - 可选，如果提供，则使用它作为主词条，不随机选取
  * @returns {Object|null} 题目对象，格式：
  * {
  *   questionType,     // 题型（7种之一）
  *   questionText,     // 题干文本（单词、释义或处理后的句子）
  *   choices,          // 选项数组（2~4个，保证同语言同类型，不混杂）
  *   correctIndex,     // 正确选项在 choices 中的下标
- *   word          // 当前主词汇（对于单词选题或填空题，取 item.word）
+ *   word              // 当前主词汇（对于单词选题或填空题，取 item.word）
  * }
  */
-export function generateChoiceQuestion(entireVocabulary, questionType) {
+export function generateQuestionData(
+  entireVocabulary,
+  questionType,
+  currentItem
+) {
   if (!entireVocabulary || entireVocabulary.length === 0) {
-    console.error("generateChoiceQuestion: 学习集为空");
+    console.error("generateQuestionData: 学习集为空");
     return null;
   }
 
@@ -68,8 +75,9 @@ export function generateChoiceQuestion(entireVocabulary, questionType) {
     questionType = CHOICE_TYPES[rand];
   }
 
-  // 2. 随机选取一个主词条
+  // 2. 确定主词条：若传入 currentItem，则使用；否则随机选取
   const item =
+    currentItem ||
     entireVocabulary[Math.floor(Math.random() * entireVocabulary.length)];
 
   // 3. 如果题型为 "synonym" 或 "antonym"，但当前词条对应数组为空，则随机选择其他题型
@@ -114,7 +122,6 @@ export function generateChoiceQuestion(entireVocabulary, questionType) {
       break;
     case "synonym":
       questionText = item.word || "???";
-      // 此处必有 synonyms 数组，否则前面已转换题型
       correctAnswer = pickRandom(item.synonyms);
       break;
     case "antonym":
@@ -128,19 +135,19 @@ export function generateChoiceQuestion(entireVocabulary, questionType) {
           questionText = replaceWordWithUnderscore(sentence, item.word);
           correctAnswer = item.word || "???";
         } else {
-          console.error("generateChoiceQuestion: 句子中未找到主词", item);
+          console.error("generateQuestionData: 句子中未找到主词", item);
           questionText = sentence;
           correctAnswer = item.word || "???";
         }
       } else {
-        console.error("generateChoiceQuestion: 例句题型缺少 sentences", item);
+        console.error("generateQuestionData: 例句题型缺少 sentences", item);
         questionText = "___ (缺少句子)";
         correctAnswer = item.word || "defaultWord";
       }
       break;
     default:
-      questionText = item.word;
-      correctAnswer = item.word;
+      questionText = item.word || "???";
+      correctAnswer = item.word || "";
   }
 
   // 5. 生成干扰项（选项必须与 correctAnswer 同语言/同类型，不混杂）

@@ -6,7 +6,7 @@ import "../card-header/choice-header/choice-header.js";
 // 更新：引入新的 helper 方法
 import {
   ALL_TYPES,
-  generateChoiceQuestion,
+  generateQuestionData,
 } from "../../helpers/generate-question-data.js";
 
 class AnkiCard extends HTMLElement {
@@ -77,7 +77,7 @@ class AnkiCard extends HTMLElement {
       console.warn("anki-card setData => no valid data");
     }
 
-    // 此处暂不对 distractors 做额外处理，全部由 helper 生成
+    // 重置题型
     this._questionType = null;
     this.render();
   }
@@ -100,9 +100,12 @@ class AnkiCard extends HTMLElement {
 
     // 调用 helper 生成最终题目数据，并传递给 header 组件
     if (ALL_TYPES.includes(this._questionType)) {
-      const questionData = generateChoiceQuestion(
+      // 刷新时保持当前词，调用 helper 时传入当前词作为第三参数
+      const currentItem = this._vocabulary[this._currentIndex];
+      const questionData = generateQuestionData(
         this._vocabulary,
-        this._questionType
+        this._questionType,
+        currentItem
       );
       const headerComp = this.shadowRoot.getElementById("header-comp");
       if (headerComp && typeof headerComp.setData === "function") {
@@ -168,11 +171,15 @@ class AnkiCard extends HTMLElement {
           </div>
           <div class="synonyms-row">
             <span class="synonyms-label">近义词：</span>
-            <span class="synonyms">${cur.synonym || ""}</span>
+            <span class="synonyms">${
+              cur.synonyms ? cur.synonyms.join(", ") : ""
+            }</span>
           </div>
           <div class="antonyms-row">
             <span class="antonyms-label">反义词：</span>
-            <span class="antonyms">${cur.antonym || ""}</span>
+            <span class="antonyms">${
+              cur.antonyms ? cur.antonyms.join(", ") : ""
+            }</span>
           </div>
           <div class="examples">
             <div class="label">例句（点击切换）：</div>
@@ -194,7 +201,7 @@ class AnkiCard extends HTMLElement {
       const rand = Math.floor(Math.random() * ALL_TYPES.length);
       this._questionType = ALL_TYPES[rand];
     }
-    // 如果不是 display 类型，则隐藏详情区
+    // 只有 display 题型默认展开详情，其余均隐藏
     this._detailVisible = this._questionType === "display";
 
     if (ALL_TYPES.includes(this._questionType)) {
@@ -237,37 +244,25 @@ class AnkiCard extends HTMLElement {
   }
 
   _refresh() {
-    const cardEl = this._contentContainer.querySelector(".card-container");
-    if (cardEl) {
-      cardEl.classList.add("fade-out");
-      setTimeout(() => {
-        let newType;
-        do {
-          newType = ALL_TYPES[Math.floor(Math.random() * ALL_TYPES.length)];
-        } while (newType === this._questionType);
-        this._questionType = newType;
-        this._detailVisible = newType === "display";
-        this.render();
-        const newCard = this._contentContainer.querySelector(".card-container");
-        if (newCard) {
-          newCard.classList.add("fade-in");
-          setTimeout(() => newCard.classList.remove("fade-in"), 200);
-        }
-        this.dispatchEvent(
-          new CustomEvent("refreshClicked", { bubbles: true, composed: true })
-        );
-      }, 200);
-    } else {
+    // 基于当前词重新生成题目，不改变 _currentIndex
+    const cur = this._vocabulary[this._currentIndex];
+    if (cur) {
       let newType;
       do {
         newType = ALL_TYPES[Math.floor(Math.random() * ALL_TYPES.length)];
       } while (newType === this._questionType);
       this._questionType = newType;
       this._detailVisible = newType === "display";
-      this.render();
-      this.dispatchEvent(
-        new CustomEvent("refreshClicked", { bubbles: true, composed: true })
+      // 刷新时基于当前词调用 helper：传入 currentItem
+      const questionData = generateQuestionData(
+        this._vocabulary,
+        this._questionType,
+        cur
       );
+      const headerComp = this.shadowRoot.getElementById("header-comp");
+      if (headerComp && typeof headerComp.setData === "function") {
+        headerComp.setData(questionData);
+      }
     }
   }
 
@@ -284,52 +279,61 @@ class AnkiCard extends HTMLElement {
     }
   }
 
+  _randomizeExample() {
+    const cur = this._vocabulary[this._currentIndex];
+    if (cur?.sentences?.length) {
+      const idx = Math.floor(Math.random() * cur.sentences.length);
+      this._currentExample = cur.sentences[idx];
+      const exampleEl =
+        this._contentContainer.querySelector(".example-sentence");
+      if (exampleEl) {
+        exampleEl.textContent = this._currentExample;
+      }
+    }
+  }
+
   showPrev() {
     if (this._vocabulary.length <= 1) return;
+    // 左右切换：采用绕 y 轴旋转 180° 效果
     const cardEl = this._contentContainer.querySelector(".card-container");
-    if (!cardEl) {
+    if (cardEl) {
+      cardEl.style.transition = "transform 0.3s ease";
+      cardEl.style.transform = "rotateY(180deg)";
+      setTimeout(() => {
+        this._currentIndex =
+          (this._currentIndex - 1 + this._vocabulary.length) %
+          this._vocabulary.length;
+        // 重置动画状态
+        cardEl.style.transform = "rotateY(0deg)";
+        this._questionType = null;
+        this.render();
+      }, 300);
+    } else {
       this._currentIndex =
         (this._currentIndex - 1 + this._vocabulary.length) %
         this._vocabulary.length;
       this._questionType = null;
       this.render();
-      return;
     }
-    cardEl.classList.add("flip-out-left");
-    setTimeout(() => {
-      this._currentIndex =
-        (this._currentIndex - 1 + this._vocabulary.length) %
-        this._vocabulary.length;
-      this._questionType = null;
-      this.render();
-      const newCard = this._contentContainer.querySelector(".card-container");
-      if (newCard) {
-        newCard.classList.add("flip-in-left");
-        setTimeout(() => newCard.classList.remove("flip-in-left"), 200);
-      }
-    }, 200);
   }
 
   showNext() {
     if (this._vocabulary.length <= 1) return;
     const cardEl = this._contentContainer.querySelector(".card-container");
-    if (!cardEl) {
+    if (cardEl) {
+      cardEl.style.transition = "transform 0.3s ease";
+      cardEl.style.transform = "rotateY(180deg)";
+      setTimeout(() => {
+        this._currentIndex = (this._currentIndex + 1) % this._vocabulary.length;
+        cardEl.style.transform = "rotateY(0deg)";
+        this._questionType = null;
+        this.render();
+      }, 300);
+    } else {
       this._currentIndex = (this._currentIndex + 1) % this._vocabulary.length;
       this._questionType = null;
       this.render();
-      return;
     }
-    cardEl.classList.add("flip-out-right");
-    setTimeout(() => {
-      this._currentIndex = (this._currentIndex + 1) % this._vocabulary.length;
-      this._questionType = null;
-      this.render();
-      const newCard = this._contentContainer.querySelector(".card-container");
-      if (newCard) {
-        newCard.classList.add("flip-in-right");
-        setTimeout(() => newCard.classList.remove("flip-in-right"), 200);
-      }
-    }, 200);
   }
 }
 
