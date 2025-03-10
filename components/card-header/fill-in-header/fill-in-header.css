@@ -150,6 +150,12 @@
   background-color: red;
 }
 
+/* 新增：确保提交按钮内的 SVG icon 默认状态下居中 */
+.submit-btn svg {
+  display: block;
+  margin: auto;
+}
+
 /* Definition area styling */
 .definition-area {
   display: flex;

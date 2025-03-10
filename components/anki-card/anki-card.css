@@ -1,5 +1,77 @@
 /* components/anki-card/anki-card.css */
 
+/* ========== fade-out：用于刷新按钮时整张卡片渐隐 ========== */
+.fade-out {
+  transition: opacity 0.2s ease;
+  opacity: 0;
+}
+
+/* ========== fade-in：用于刷新后新卡片渐显 ========== */
+.fade-in {
+  animation: fadeIn 0.2s forwards;
+}
+
+/* ========== 卡片 3D 扑克牌效果 ========== */
+.flip-out-left {
+  transform-origin: center left;
+  transform: perspective(1000px) rotateY(45deg) scale(0.9);
+  opacity: 0;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.flip-out-right {
+  transform-origin: center right;
+  transform: perspective(1000px) rotateY(-45deg) scale(0.9);
+  opacity: 0;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.flip-in-left {
+  transform-origin: center left;
+  animation: flipInLeft 0.2s forwards;
+}
+
+.flip-in-right {
+  transform-origin: center right;
+  animation: flipInRight 0.2s forwards;
+}
+
+@keyframes flipInLeft {
+  0% {
+    transform: perspective(1000px) rotateY(-45deg) scale(0.9);
+    opacity: 0;
+  }
+
+  100% {
+    transform: perspective(1000px) rotateY(0deg) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes flipInRight {
+  0% {
+    transform: perspective(1000px) rotateY(45deg) scale(0.9);
+    opacity: 0;
+  }
+
+  100% {
+    transform: perspective(1000px) rotateY(0deg) scale(1);
+    opacity: 1;
+  }
+}
+
+/* ========== fadeIn 关键帧 ========== */
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+/* ========== 卡片整体容器 ========== */
 .card-container {
   width: 400px;
   margin: 0 auto;
@@ -26,24 +98,11 @@
   gap: 16px;
   color: #333;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  transform-style: preserve-3d;
+  /* 允许子元素使用 3D transform */
 }
 
-/* Header 渐隐过渡效果 */
-.card-header {
-  transition: opacity 0.3s ease;
-  opacity: 1;
-}
-
-.fade-out {
-  transition: opacity 0.3s ease;
-  opacity: 0;
-}
-
-.card-header.fade-out {
-  opacity: 0;
-}
-
-/* 详情区域：使用 max-height + opacity 实现渐变展开/收起 */
+/* ========== 详情区域：max-height + opacity 实现渐变展开/收起 ========== */
 .details-section {
   background-color: rgba(255, 255, 255, 0.65);
   border-radius: 8px;
@@ -53,7 +112,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  transition: max-height 0.3s ease, opacity 0.3s ease;
+  transition: max-height 0.2s ease, opacity 0.2s ease;
   overflow: hidden;
   max-height: 500px;
   opacity: 1;
@@ -100,7 +159,6 @@
   color: #42a5f5;
 }
 
-/* Synonyms / Antonyms */
 .synonyms-row {
   display: inline-flex;
   align-items: center;
@@ -136,16 +194,13 @@
   color: #d32f2f;
 }
 
-/* Examples */
 .examples {
   display: flex;
   flex-direction: column;
   margin-top: 24px;
   padding: 8px;
   border-left: 3px solid #2196f3;
-  background: linear-gradient(135deg,
-      rgba(227, 242, 253, 0.8),
-      rgba(187, 222, 251, 0.8));
+  background: linear-gradient(135deg, rgba(227, 242, 253, 0.8), rgba(187, 222, 251, 0.8));
 }
 
 .examples .label {
@@ -160,7 +215,7 @@
   color: #333;
   border-bottom: 1px dotted #bbb;
   padding-bottom: 4px;
-  transition: background 0.3s, color 0.3s;
+  transition: background 0.2s, color 0.2s;
 }
 
 .example-sentence:hover {
@@ -169,7 +224,7 @@
   color: #1976d2;
 }
 
-/* 刷新按钮 */
+/* ========== 刷新按钮 ========== */
 .card-refresh-btn {
   position: absolute;
   top: 10px;
@@ -184,7 +239,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform 0.3s, opacity 0.3s;
+  transition: transform 0.2s, opacity 0.2s;
 }
 
 .card-refresh-btn .icon {
@@ -199,9 +254,8 @@
   width: 100%;
   height: 100%;
   fill: white;
-  /* 设置图标颜色为白色 */
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
-  transition: fill 0.3s, transform 0.3s;
+  transition: fill 0.2s, transform 0.2s;
 }
 
 .card-refresh-btn:hover {
@@ -209,7 +263,7 @@
   opacity: 0.8;
 }
 
-/* 原先存在的 expand-more 样式及子元素 */
+/* ========== expand-more 样式 ========== */
 .expand-more {
   width: 90%;
   margin: 0 auto;
@@ -217,7 +271,7 @@
   flex-direction: column;
   align-items: center;
   cursor: pointer;
-  transition: transform 0.3s ease;
+  transition: transform 0.2s ease;
 }
 
 .expand-line {
@@ -233,7 +287,7 @@
   fill: white;
 }
 
-/* 外部左右翻页按钮 .nav-btn */
+/* ========== 外部左右翻页按钮 .nav-btn ========== */
 .nav-btn {
   width: 40px;
   height: 40px;
@@ -245,7 +299,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform 0.3s, color 0.3s;
+  transition: transform 0.2s, color 0.2s;
 }
 
 .nav-btn .icon {
@@ -260,7 +314,7 @@
   width: 100%;
   height: 100%;
   fill: #333;
-  transition: fill 0.3s, transform 0.3s;
+  transition: fill 0.2s, transform 0.2s;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
 }
 
@@ -273,7 +327,7 @@
   transform: scale(1.1);
 }
 
-/* 移动端：屏幕宽小于600px时 */
+/* ========== 移动端适配 ========== */
 @media (max-width: 600px) {
   #main-container {
     flex-direction: column;

@@ -163,7 +163,7 @@ class AnkiCard extends HTMLElement {
 
     return `
       <div class="card-container">
-        <!-- Header组件，由各自header文件处理提交等逻辑 -->
+        <!-- Header组件 -->
         <div class="card-header">
           ${headerTemplate}
         </div>
@@ -212,9 +212,7 @@ class AnkiCard extends HTMLElement {
   }
 
   render() {
-    // 使用 getTemplate() 更新内容
     this._contentContainer.innerHTML = this.getTemplate();
-    // 缓存详情区域元素以便后续切换
     this._detailsSection =
       this._contentContainer.querySelector("#details-section");
     this._updateFontSizeProperty();
@@ -242,15 +240,14 @@ class AnkiCard extends HTMLElement {
 
   _handleClick(event) {
     const target = event.target;
-    // 刷新按钮点击
+    // 刷新按钮点击 => 整个 card-container 渐隐 -> 更新 -> 渐显
     const refreshBtn = this._contentContainer.querySelector("#refresh-btn");
     if (refreshBtn && refreshBtn.contains(target)) {
-      const headerContainer =
-        this._contentContainer.querySelector(".card-header");
-      if (headerContainer) {
-        headerContainer.classList.add("fade-out");
+      const cardEl = this._contentContainer.querySelector(".card-container");
+      if (cardEl) {
+        cardEl.classList.add("fade-out");
         setTimeout(() => {
-          // 如果当前 header 为 display，则切换到 fill-in；否则切换到 display
+          // 切换 display/fill-in
           if (this._questionType === "display") {
             this._questionType = "fill-in";
             this._detailVisible = false;
@@ -259,12 +256,21 @@ class AnkiCard extends HTMLElement {
             this._detailVisible = true;
           }
           this.render();
+          // 渲染后给新的 card-container 做 fade-in
+          const newCard =
+            this._contentContainer.querySelector(".card-container");
+          if (newCard) {
+            newCard.classList.add("fade-in");
+            setTimeout(() => {
+              newCard.classList.remove("fade-in");
+            }, 200); // 动画时长 200ms
+          }
           this.dispatchEvent(
             new CustomEvent("refreshClicked", { bubbles: true, composed: true })
           );
-        }, 300);
+        }, 200); // 动画时长 200ms
       } else {
-        // 若未找到 headerContainer，则直接切换
+        // 若未找到 card-container，则直接切换
         if (this._questionType === "display") {
           this._questionType = "fill-in";
           this._detailVisible = false;
@@ -279,13 +285,13 @@ class AnkiCard extends HTMLElement {
       }
       return;
     }
+
     // 切换详情按钮点击
     const expandArea = this._contentContainer.querySelector("#expandMoreArea");
     if (expandArea && expandArea.contains(target)) {
       if (this._detailsSection) {
         this._detailVisible = !this._detailVisible;
         this._detailsSection.classList.toggle("hidden", !this._detailVisible);
-        // 同时更新箭头方向
         const arrowContainer =
           this._contentContainer.querySelector(".expand-arrow");
         if (arrowContainer) {
@@ -300,6 +306,7 @@ class AnkiCard extends HTMLElement {
       }
       return;
     }
+
     // 例句点击切换
     const exampleEl = this._contentContainer.querySelector(".example-sentence");
     if (exampleEl && exampleEl.contains(target)) {
@@ -309,61 +316,61 @@ class AnkiCard extends HTMLElement {
   }
 
   /**
-   * 新增：切换卡片时渐隐过渡
-   * 先为 .card-container 添加 fade-out，动画结束后再切换 index 并 render
+   * 左右切换按钮：旧卡片3D旋转离场 -> 更新索引 -> 新卡片3D旋转入场
+   * 整个过程 200ms 完成
    */
   showPrev() {
     if (this._vocabulary.length <= 1) return;
-    const cardContainer =
-      this._contentContainer.querySelector(".card-container");
-    if (cardContainer) {
-      cardContainer.classList.add("fade-out");
-      setTimeout(() => {
-        this._currentIndex =
-          (this._currentIndex - 1 + this._vocabulary.length) %
-          this._vocabulary.length;
-        this._questionType = null;
-        this.render();
-        // 渲染后移除 fade-out
-        const newCardContainer =
-          this._contentContainer.querySelector(".card-container");
-        if (newCardContainer) {
-          newCardContainer.classList.remove("fade-out");
-        }
-      }, 300);
-    } else {
-      // 如果未找到 cardContainer，直接切换
+    const cardEl = this._contentContainer.querySelector(".card-container");
+    if (!cardEl) {
+      // 若无 card-container，则直接切换
       this._currentIndex =
         (this._currentIndex - 1 + this._vocabulary.length) %
         this._vocabulary.length;
       this._questionType = null;
       this.render();
+      return;
     }
+    cardEl.classList.add("flip-out-left");
+    setTimeout(() => {
+      this._currentIndex =
+        (this._currentIndex - 1 + this._vocabulary.length) %
+        this._vocabulary.length;
+      this._questionType = null;
+      this.render();
+      const newCard = this._contentContainer.querySelector(".card-container");
+      if (newCard) {
+        newCard.classList.add("flip-in-left");
+        setTimeout(() => {
+          newCard.classList.remove("flip-in-left");
+        }, 200);
+      }
+    }, 200);
   }
 
   showNext() {
     if (this._vocabulary.length <= 1) return;
-    const cardContainer =
-      this._contentContainer.querySelector(".card-container");
-    if (cardContainer) {
-      cardContainer.classList.add("fade-out");
-      setTimeout(() => {
-        this._currentIndex = (this._currentIndex + 1) % this._vocabulary.length;
-        this._questionType = null;
-        this.render();
-        // 渲染后移除 fade-out
-        const newCardContainer =
-          this._contentContainer.querySelector(".card-container");
-        if (newCardContainer) {
-          newCardContainer.classList.remove("fade-out");
-        }
-      }, 300);
-    } else {
-      // 如果未找到 cardContainer，直接切换
+    const cardEl = this._contentContainer.querySelector(".card-container");
+    if (!cardEl) {
+      // 若无 card-container，则直接切换
       this._currentIndex = (this._currentIndex + 1) % this._vocabulary.length;
       this._questionType = null;
       this.render();
+      return;
     }
+    cardEl.classList.add("flip-out-right");
+    setTimeout(() => {
+      this._currentIndex = (this._currentIndex + 1) % this._vocabulary.length;
+      this._questionType = null;
+      this.render();
+      const newCard = this._contentContainer.querySelector(".card-container");
+      if (newCard) {
+        newCard.classList.add("flip-in-right");
+        setTimeout(() => {
+          newCard.classList.remove("flip-in-right");
+        }, 200);
+      }
+    }, 200);
   }
 }
 
