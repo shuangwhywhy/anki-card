@@ -1,6 +1,6 @@
 /* components/card-header/fill-in-header/fill-in-header.css */
 
-/* 整体容器 */
+/* Overall container for the fill-in header */
 .fill-in-header-container {
   display: flex;
   flex-direction: column;
@@ -9,14 +9,14 @@
   padding-top: 20px;
 }
 
-/* question-block: 上下两块，宽度自适应 */
+/* Question block: contains the question line (letters and submit button) */
 .question-block {
   display: flex;
   flex-direction: column;
   max-width: 100%;
 }
 
-/* question-line: 分左右两块 */
+/* Question line: splits into left part (letters) and right part (submit button) */
 .question-line {
   display: flex;
   justify-content: space-between;
@@ -25,7 +25,7 @@
   white-space: nowrap;
 }
 
-/* left-part: 包含 letter-line 和 answer-line */
+/* Left part: letter-line and answer-line */
 .left-part {
   display: flex;
   flex-direction: column;
@@ -33,23 +33,22 @@
   gap: 4px;
 }
 
-/* right-part: 放提交按钮 */
+/* Right part: for the submit button */
 .right-part {
   display: flex;
   align-items: flex-start;
 }
 
-/* letter-line: 主字母行，使用等宽字体 */
+/* Letter line: display the letters with a monospace font */
 .letter-line {
   display: inline-flex;
   gap: 2px;
-  /* 调整字母间距 */
   white-space: nowrap;
   font-family: "Consolas", "DejaVu Sans Mono", "Lucida Console", "Andale Mono", monospace;
   font-size: var(--letterFontSize, 32px);
 }
 
-/* answer-line: 正确答案行，同样使用等宽字体 */
+/* Answer line: same monospace font */
 .answer-line {
   display: inline-flex;
   gap: 2px;
@@ -59,7 +58,7 @@
   font-size: var(--letterFontSize, 32px);
 }
 
-/* 通用字母样式 */
+/* General letter styling */
 .letter {
   font-weight: bold;
   text-align: center;
@@ -68,33 +67,34 @@
   vertical-align: baseline;
 }
 
-/* 给出的字母：黑色，无下划线 */
+/* Given letters: black color, no underline */
 .letter.given {
   color: black;
   border-bottom: none;
 }
 
-/* 空缺字母：默认黑色，下划线显示 */
+/* Blank letters: black color with an underline */
 .letter.blank {
   color: black;
   border-bottom: 2px solid black;
   position: relative;
 }
 
-/* 错误状态：文字及下划线变红 */
+/* Error state for blank letters: red text and red underline */
 .letter.blank.error {
   color: red;
   border-bottom: 2px solid red;
 }
 
-/* 焦点状态：移除默认 outline，添加圆角及自然高级的阴影 */
+/* Focus state for blank letters: remove default outline, add rounded border and apply blinking border-bottom and box-shadow animation */
 .letter.blank:focus {
   outline: none;
   border-radius: 4px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  animation: blink-border 1s infinite;
 }
 
-/* 焦点时显示闪烁光标 */
+/* Remove the default blinking caret pseudo-element rule */
+/*
 .letter.blank:focus::after {
   content: "";
   display: inline-block;
@@ -107,21 +107,39 @@
   transform: translateX(-50%);
   animation: blink-caret 1s infinite step-start;
 }
+*/
 
+/* Remove unused blink-caret keyframes */
+/*
 @keyframes blink-caret {
-
-  0%,
-  50% {
+  0%, 50% {
     opacity: 1;
   }
-
-  50.1%,
-  100% {
+  50.1%, 100% {
     opacity: 0;
   }
 }
+*/
 
-/* 正确答案行中的字母：同题干，无下划线 */
+/* New blinking border-bottom and box-shadow animation */
+@keyframes blink-border {
+  0% {
+    border-bottom-color: black;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  }
+
+  50% {
+    border-bottom-color: #2196f3;
+    box-shadow: 0 2px 6px rgba(33, 150, 243, 0.6);
+  }
+
+  100% {
+    border-bottom-color: black;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* Letter answer styling in the answer line: bold, centered, no underline */
 .letter-answer {
   font-weight: bold;
   text-align: center;
@@ -130,7 +148,7 @@
   border-bottom: none;
 }
 
-/* 提交按钮 */
+/* Submit button styling */
 .submit-btn {
   width: 36px;
   height: 36px;
@@ -160,7 +178,7 @@
   background-color: red;
 }
 
-/* 定义区 */
+/* Definition area styling */
 .definition-area {
   display: flex;
   flex-direction: column;
