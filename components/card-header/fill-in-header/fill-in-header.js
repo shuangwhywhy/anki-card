@@ -284,7 +284,7 @@ class FillInHeader extends HTMLElement {
                      </g>
                    </svg>`
                 : `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="#1041CF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                     <g transform="scale(0.8)">
+                     <g transform="translate(2.4,2.4) scale(0.8)">
                        <path d="M20 16V8.5C20 7.67157 19.3587 7 18.5195 7C18 7 17 7.3 17 8.5V5.5C17 4.67157 16.3588 4 15.5195 4C15.013 4 14 4.3 14 5.5V3.5C14 2.67157 13.3588 2 12.5195 2C11.6803 2 11 2.67157 11 3.5V5.5C11 4.3 10.0065 4 9.5 4C8.66076 4 8 4.69115 8 5.51957L8.00004 14" />
                        <path d="M11 5.5V11"/>
                        <path d="M14 5.5V11"/>
