@@ -25,7 +25,7 @@ class ChoiceHeader extends HTMLElement {
     this.questionText = "";
     this.choices = [];
     this.correctIndex = 0;
-    this.mainWord = "";
+    this.word = "";
     this._selected = false;
   }
 
@@ -35,7 +35,7 @@ class ChoiceHeader extends HTMLElement {
    *   questionText: string,
    *   choices: string[], // 2~4
    *   correctIndex: number, // 0~3
-   *   mainWord: string
+   *   word: string
    * })
    */
   setData(data) {
@@ -46,7 +46,7 @@ class ChoiceHeader extends HTMLElement {
     this.choices = Array.isArray(data.choices) ? data.choices : [];
     this.correctIndex =
       typeof data.correctIndex === "number" ? data.correctIndex : 0;
-    this.mainWord = data.mainWord || "";
+    this.word = data.word || "";
     this._selected = false;
 
     this.render();

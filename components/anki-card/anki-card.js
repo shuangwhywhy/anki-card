@@ -53,13 +53,7 @@ class AnkiCard extends HTMLElement {
   setData(data) {
     if (data && Array.isArray(data.vocabulary)) {
       // 多个词条
-      this._vocabulary = data.vocabulary.map((item) => ({
-        ...item,
-        chineseDefinition:
-          item.chineseDefinition || item["中文释义"] || "暂无中文释义",
-        englishDefinition:
-          item.englishDefinition || item["英文释义"] || "暂无英文释义",
-      }));
+      this._vocabulary = data.vocabulary;
       this._currentIndex = 0;
       if (this._vocabulary[0].sentences?.length) {
         this._currentExample = this._vocabulary[0].sentences[0] || "";
@@ -70,15 +64,7 @@ class AnkiCard extends HTMLElement {
       );
     } else if (data && data.word) {
       // 单个词条
-      this._vocabulary = [
-        {
-          ...data,
-          chineseDefinition:
-            data.chineseDefinition || data["中文释义"] || "暂无中文释义",
-          englishDefinition:
-            data.englishDefinition || data["英文释义"] || "暂无英文释义",
-        },
-      ];
+      this._vocabulary = [data];
       this._currentIndex = 0;
       if (data.sentences?.length) {
         this._currentExample = data.sentences[0];
@@ -120,6 +106,7 @@ class AnkiCard extends HTMLElement {
       );
       const headerComp = this.shadowRoot.getElementById("header-comp");
       if (headerComp && typeof headerComp.setData === "function") {
+        console.log("[anki] headerComp.setData", questionData, headerComp);
         headerComp.setData(questionData);
       }
     }
@@ -130,7 +117,6 @@ class AnkiCard extends HTMLElement {
       return `<div class="card-container">No Data</div>`;
     }
     const cur = this._vocabulary[this._currentIndex];
-    const headerTemplate = this._getHeaderTemplate();
     const detailsClass = this._detailVisible ? "" : " hidden";
 
     const posMapping = {
