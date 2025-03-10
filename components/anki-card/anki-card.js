@@ -251,6 +251,7 @@ class AnkiCard extends HTMLElement {
       do {
         newType = ALL_TYPES[Math.floor(Math.random() * ALL_TYPES.length)];
       } while (newType === this._questionType);
+      const previousType = this._questionType;
       this._questionType = newType;
       this._detailVisible = newType === "display";
       // 刷新时基于当前词调用 helper：传入 currentItem
@@ -260,10 +261,26 @@ class AnkiCard extends HTMLElement {
         cur
       );
       const headerComp = this.shadowRoot.getElementById("header-comp");
-      if (headerComp && typeof headerComp.setData === "function") {
-        headerComp.setData(questionData);
+      const expectedTag = this._getExpectedHeaderTag(this._questionType);
+      if (headerComp) {
+        if (headerComp.tagName.toLowerCase() !== expectedTag) {
+          // 如果类型不一致，重新渲染整个 header 部分
+          this.render();
+        } else {
+          // 类型一致，直接更新数据
+          headerComp.setData(questionData);
+        }
+      } else {
+        this.render();
       }
     }
+  }
+
+  _getExpectedHeaderTag(type) {
+    if (type === "fill-in") return "fill-in-header";
+    if (type === "display") return "display-header";
+    // 其余 7 种选择题统一由 choice-header 组件处理
+    return "choice-header";
   }
 
   _toggleDetails() {
