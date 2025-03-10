@@ -117,7 +117,6 @@ class AnkiCard extends HTMLElement {
       return `<div class="card-container">No Data</div>`;
     }
     const cur = this._vocabulary[this._currentIndex];
-    const detailsClass = this._detailVisible ? "" : " hidden";
 
     const posMapping = {
       noun: "n.",
@@ -133,6 +132,9 @@ class AnkiCard extends HTMLElement {
       ? posMapping[cur.pos.toLowerCase()] || cur.pos
       : "";
 
+    const headerTemplate = this._getHeaderTemplate();
+    const detailsClass = this._detailVisible ? "" : " hidden";
+
     const toggleArrowSVG = this._detailVisible
       ? `<svg viewBox="0 0 24 24">
            <polyline points="6 15 12 9 18 15" stroke="white" stroke-width="2" fill="none"/>
@@ -144,7 +146,7 @@ class AnkiCard extends HTMLElement {
     return `
       <div class="card-container">
         <div class="card-header">
-          ${this._getHeaderTemplate()}
+          ${headerTemplate}
         </div>
         <div class="card-refresh-btn" id="refresh-btn">
           <div class="icon">
@@ -191,8 +193,10 @@ class AnkiCard extends HTMLElement {
     if (!this._questionType) {
       const rand = Math.floor(Math.random() * ALL_TYPES.length);
       this._questionType = ALL_TYPES[rand];
-      this._detailVisible = this._questionType === "display";
     }
+    // 如果不是 display 类型，则隐藏详情区
+    this._detailVisible = this._questionType === "display";
+
     if (ALL_TYPES.includes(this._questionType)) {
       if (this._questionType === "fill-in") {
         return `<fill-in-header id="header-comp"></fill-in-header>`;
