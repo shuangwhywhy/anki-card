@@ -28,12 +28,17 @@
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
-.word-section {
-  font-size: 1.8em;
-  text-align: center;
-  font-weight: bold;
+/* Header 渐隐过渡效果 */
+.card-header {
+  transition: opacity 0.3s ease;
+  opacity: 1;
 }
 
+.card-header.fade-out {
+  opacity: 0;
+}
+
+/* 详情区域：使用 max-height + opacity 实现渐变展开/收起 */
 .details-section {
   background-color: rgba(255, 255, 255, 0.65);
   border-radius: 8px;
@@ -43,10 +48,15 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  transition: max-height 0.3s ease, opacity 0.3s ease;
+  overflow: hidden;
+  max-height: 500px;
+  opacity: 1;
 }
 
 .details-section.hidden {
-  display: none;
+  max-height: 0;
+  opacity: 0;
 }
 
 .detail-row {
@@ -83,9 +93,9 @@
   font-size: 1em;
   font-weight: bold;
   color: #42a5f5;
-  /* margin-top 已移除 */
 }
 
+/* Synonyms / Antonyms */
 .synonyms-row {
   display: inline-flex;
   align-items: center;
@@ -108,7 +118,6 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  /* margin-top 已移除 */
   text-align: left;
 }
 
@@ -122,13 +131,16 @@
   color: #d32f2f;
 }
 
+/* Examples */
 .examples {
   display: flex;
   flex-direction: column;
   margin-top: 24px;
   padding: 8px;
   border-left: 3px solid #2196f3;
-  background: linear-gradient(135deg, rgba(227, 242, 253, 0.8), rgba(187, 222, 251, 0.8));
+  background: linear-gradient(135deg,
+      rgba(227, 242, 253, 0.8),
+      rgba(187, 222, 251, 0.8));
 }
 
 .examples .label {
@@ -152,30 +164,7 @@
   color: #1976d2;
 }
 
-.expand-more {
-  width: 90%;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  cursor: pointer;
-  transition: transform 0.3s ease;
-}
-
-.expand-line {
-  width: 100%;
-  height: 1px;
-  background-color: #ccc;
-  margin-bottom: 4px;
-}
-
-.expand-arrow svg {
-  width: 24px;
-  height: 24px;
-  fill: white;
-}
-
-/* 刷新按钮：卡片内的刷新按钮改为全透明，仅显示图标，尺寸为30px */
+/* 刷新按钮 */
 .card-refresh-btn {
   position: absolute;
   top: 10px;
@@ -204,8 +193,8 @@
 .card-refresh-btn .icon svg {
   width: 100%;
   height: 100%;
-  /* 设置图标颜色为白色，由外部控制 */
   fill: white;
+  /* 设置图标颜色为白色 */
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
   transition: fill 0.3s, transform 0.3s;
 }
@@ -215,7 +204,31 @@
   opacity: 0.8;
 }
 
-/* 外部左右翻页按钮统一使用 .nav-btn 样式 */
+/* 原先存在的 expand-more 样式及子元素 */
+.expand-more {
+  width: 90%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.expand-line {
+  width: 100%;
+  height: 1px;
+  background-color: #ccc;
+  margin-bottom: 4px;
+}
+
+.expand-arrow svg {
+  width: 24px;
+  height: 24px;
+  fill: white;
+}
+
+/* 外部左右翻页按钮 .nav-btn */
 .nav-btn {
   width: 40px;
   height: 40px;

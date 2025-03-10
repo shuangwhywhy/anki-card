@@ -33,15 +33,22 @@ class AnkiCard extends HTMLElement {
     // 初始字号（px），实际字号由 CSS 自定义属性控制
     this._fontSize = 32;
 
-    // 绑定点击处理函数（事件委托）
-    this._handleClick = this._handleClick.bind(this);
+    // 注意：不要在 constructor 中绑定 _handleClick，以免和 connectedCallback 重复绑定
+    // this._contentContainer.addEventListener("click", this._handleClick);
 
+    // 初次渲染
     this.render();
   }
 
+  /**
+   * 恢复原先被误删的 connectedCallback 代码，且绑定事件只在这里执行一次
+   */
   connectedCallback() {
-    // 在容器上绑定点击事件（只绑定一次）
-    this._contentContainer.addEventListener("click", this._handleClick);
+    // 使用事件委托绑定点击事件（只绑定一次）
+    this._contentContainer.addEventListener(
+      "click",
+      this._handleClick.bind(this)
+    );
   }
 
   setData(data) {
@@ -244,13 +251,38 @@ class AnkiCard extends HTMLElement {
     // 刷新按钮点击
     const refreshBtn = this._contentContainer.querySelector("#refresh-btn");
     if (refreshBtn && refreshBtn.contains(target)) {
-      this._questionType = null;
-      this._detailVisible = false;
-      // 可在此处增加渐隐渐显效果（通过 CSS 类实现过渡）
-      this.render();
-      this.dispatchEvent(
-        new CustomEvent("refreshClicked", { bubbles: true, composed: true })
-      );
+      const headerContainer =
+        this._contentContainer.querySelector(".card-header");
+      if (headerContainer) {
+        headerContainer.classList.add("fade-out");
+        setTimeout(() => {
+          // 如果当前 header 为 display，则切换到 fill-in；否则切换到 display
+          if (this._questionType === "display") {
+            this._questionType = "fill-in";
+            this._detailVisible = false;
+          } else {
+            this._questionType = "display";
+            this._detailVisible = true;
+          }
+          this.render();
+          this.dispatchEvent(
+            new CustomEvent("refreshClicked", { bubbles: true, composed: true })
+          );
+        }, 300);
+      } else {
+        // 若未找到 headerContainer，则直接切换
+        if (this._questionType === "display") {
+          this._questionType = "fill-in";
+          this._detailVisible = false;
+        } else {
+          this._questionType = "display";
+          this._detailVisible = true;
+        }
+        this.render();
+        this.dispatchEvent(
+          new CustomEvent("refreshClicked", { bubbles: true, composed: true })
+        );
+      }
       return;
     }
     // 切换详情按钮点击
@@ -280,14 +312,6 @@ class AnkiCard extends HTMLElement {
       this._randomizeExample();
       return;
     }
-  }
-
-  connectedCallback() {
-    // 使用事件委托绑定点击事件（只绑定一次）
-    this._contentContainer.addEventListener(
-      "click",
-      this._handleClick.bind(this)
-    );
   }
 
   showPrev() {
