@@ -7,7 +7,7 @@ class AnkiCard extends HTMLElement {
     super();
     this.attachShadow({ mode: "open" });
 
-    // Load CSS only once
+    // 加载 CSS（只加载一次）
     if (!this.shadowRoot.querySelector('link[rel="stylesheet"]')) {
       const linkElem = document.createElement("link");
       linkElem.rel = "stylesheet";
@@ -15,38 +15,38 @@ class AnkiCard extends HTMLElement {
       this.shadowRoot.appendChild(linkElem);
     }
 
-    // Create a container for dynamic content
+    // 创建用于动态更新内容的容器
     this._contentContainer = document.createElement("div");
     this.shadowRoot.appendChild(this._contentContainer);
 
-    // Data initialization
+    // 数据初始化
     this._vocabulary = [];
     this._currentIndex = 0;
-    // For "display" type, details are shown; for others, hidden by default.
+    // 对于 "display" 题型，详情区默认展开；其他题型，默认隐藏
     this._detailVisible = true;
     this._currentExample = "";
-    this._questionType = null; // "display" or "fill-in"
+    this._questionType = null; // "display" 或 "fill-in"
 
-    // Cache for details section element (set after first render)
+    // 缓存详情区元素（第一次 render 后设置）
     this._detailsSection = null;
 
-    // Initial font size (px) for dynamic sizing; actual font size is set via CSS custom property.
+    // 初始字号（px），实际字号由 CSS 自定义属性控制
     this._fontSize = 32;
 
-    // Bind our click handler once.
+    // 绑定点击处理函数（事件委托）
     this._handleClick = this._handleClick.bind(this);
 
     this.render();
   }
 
   connectedCallback() {
-    // Bind events once using event delegation on the content container.
+    // 在容器上绑定点击事件（只绑定一次）
     this._contentContainer.addEventListener("click", this._handleClick);
   }
 
   setData(data) {
     if (data && Array.isArray(data.vocabulary)) {
-      // Process vocabulary entries; support possible Chinese headers.
+      // 处理词汇数据，兼容中文表头
       this._vocabulary = data.vocabulary.map((item) => ({
         ...item,
         chineseDefinition:
@@ -83,7 +83,7 @@ class AnkiCard extends HTMLElement {
       this._currentExample = "";
       console.warn("anki-card setData => no valid data");
     }
-    // Reset question type; details visibility is determined by header type.
+    // 重置题型；详情显示状态由题型决定
     this._questionType = null;
     this.render();
   }
@@ -102,7 +102,7 @@ class AnkiCard extends HTMLElement {
     if (cur?.sentences?.length) {
       const idx = Math.floor(Math.random() * cur.sentences.length);
       this._currentExample = cur.sentences[idx];
-      // Update only the example sentence text
+      // 仅更新例句文本，避免全量重绘
       const exampleEl =
         this._contentContainer.querySelector(".example-sentence");
       if (exampleEl) {
@@ -111,12 +111,13 @@ class AnkiCard extends HTMLElement {
     }
   }
 
-  // Choose header type randomly; available types: "display" and "fill-in"
+  // 随机选择题型，支持 "display" 和 "fill-in"
   _getHeaderTemplate() {
     if (!this._questionType) {
       const types = ["display", "fill-in"];
       const rand = Math.floor(Math.random() * types.length);
       this._questionType = types[rand];
+      // 对于 display 题型，详情区默认展开；其他题型默认隐藏
       this._detailVisible = this._questionType === "display";
     }
     if (this._questionType === "fill-in") {
@@ -133,7 +134,7 @@ class AnkiCard extends HTMLElement {
       return `<div class="card-container">No Data</div>`;
     }
     const cur = this._vocabulary[this._currentIndex];
-    // Convert part-of-speech to abbreviation
+    // 将词性转换为简写
     const posMapping = {
       noun: "n.",
       verb: "v.",
@@ -150,8 +151,7 @@ class AnkiCard extends HTMLElement {
     const headerTemplate = this._getHeaderTemplate();
     const detailsClass = this._detailVisible ? "" : " hidden";
 
-    // Determine the toggle arrow SVG based on details visibility:
-    // When details are visible, arrow points up; when hidden, arrow points down.
+    // Toggle 箭头，根据详情区显示状态变化
     const toggleArrowSVG = this._detailVisible
       ? `<svg viewBox="0 0 24 24">
            <polyline points="6 15 12 9 18 15" stroke="white" stroke-width="2" fill="none"/>
@@ -162,11 +162,11 @@ class AnkiCard extends HTMLElement {
 
     return `
       <div class="card-container">
-        <!-- Header component: content depends on question type -->
+        <!-- Header组件，由各自header文件处理提交等逻辑 -->
         <div class="card-header">
           ${headerTemplate}
         </div>
-        <!-- Refresh button -->
+        <!-- 刷新按钮 -->
         <div class="card-refresh-btn" id="refresh-btn">
           <div class="icon">
             <svg viewBox="0 0 24 24">
@@ -174,7 +174,7 @@ class AnkiCard extends HTMLElement {
             </svg>
           </div>
         </div>
-        <!-- Details section -->
+        <!-- 详情区域 -->
         <div id="details-section" class="details-section ${detailsClass}">
           <div class="detail-row inline">
             <span class="phonetic">${cur.phonetic || ""}</span>
@@ -199,7 +199,7 @@ class AnkiCard extends HTMLElement {
             <div class="example-sentence">${this._currentExample}</div>
           </div>
         </div>
-        <!-- Expand/Collapse toggle button -->
+        <!-- 详情切换按钮 -->
         <div class="expand-more" id="expandMoreArea">
           <div class="expand-line"></div>
           <div class="expand-arrow">
@@ -211,14 +211,14 @@ class AnkiCard extends HTMLElement {
   }
 
   render() {
-    // Update container content without re-binding events
+    // 使用 getTemplate() 更新内容
     this._contentContainer.innerHTML = this.getTemplate();
-    // Cache details section element for toggling
+    // 缓存详情区域元素以便后续切换
     this._detailsSection =
       this._contentContainer.querySelector("#details-section");
     this._updateFontSizeProperty();
 
-    // Delegate header data update if needed
+    // 如果题型为 fill-in 或 display，则传递当前单词数据给 header 组件
     if (this._questionType === "fill-in" || this._questionType === "display") {
       const headerComp = this.shadowRoot.getElementById("header-comp");
       if (headerComp && typeof headerComp.setData === "function") {
@@ -241,33 +241,25 @@ class AnkiCard extends HTMLElement {
 
   _handleClick(event) {
     const target = event.target;
-    // Submit button click
-    const submitBtn = this._contentContainer.querySelector("#submit-btn");
-    if (submitBtn && submitBtn.contains(target)) {
-      const headerComp = this.shadowRoot.getElementById("header-comp");
-      if (headerComp && typeof headerComp._triggerSubmit === "function") {
-        headerComp._triggerSubmit();
-      }
-      return;
-    }
-    // Refresh button click
+    // 刷新按钮点击
     const refreshBtn = this._contentContainer.querySelector("#refresh-btn");
     if (refreshBtn && refreshBtn.contains(target)) {
       this._questionType = null;
       this._detailVisible = false;
+      // 可在此处增加渐隐渐显效果（通过 CSS 类实现过渡）
       this.render();
       this.dispatchEvent(
         new CustomEvent("refreshClicked", { bubbles: true, composed: true })
       );
       return;
     }
-    // Toggle details
+    // 切换详情按钮点击
     const expandArea = this._contentContainer.querySelector("#expandMoreArea");
     if (expandArea && expandArea.contains(target)) {
       if (this._detailsSection) {
         this._detailVisible = !this._detailVisible;
         this._detailsSection.classList.toggle("hidden", !this._detailVisible);
-        // Re-render only the toggle arrow part by forcing update of the expand arrow:
+        // 同时更新箭头方向
         const arrowContainer =
           this._contentContainer.querySelector(".expand-arrow");
         if (arrowContainer) {
@@ -282,7 +274,7 @@ class AnkiCard extends HTMLElement {
       }
       return;
     }
-    // Example sentence click
+    // 例句点击切换
     const exampleEl = this._contentContainer.querySelector(".example-sentence");
     if (exampleEl && exampleEl.contains(target)) {
       this._randomizeExample();
@@ -291,6 +283,7 @@ class AnkiCard extends HTMLElement {
   }
 
   connectedCallback() {
+    // 使用事件委托绑定点击事件（只绑定一次）
     this._contentContainer.addEventListener(
       "click",
       this._handleClick.bind(this)
