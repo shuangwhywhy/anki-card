@@ -8,27 +8,25 @@
   padding: 16px;
 }
 
-.word-display {
-  font-size: 2em;
+.choice-question {
+  font-size: 1.6em;
   font-weight: bold;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  width: 100%;
   text-align: center;
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
 
 .options-container {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 12px;
-  justify-content: center;
   width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
 }
 
 .option {
-  flex: 1 1 calc(50% - 12px);
-  padding: 8px 12px;
+  padding: 12px;
   background: rgba(255, 255, 255, 0.4);
   backdrop-filter: blur(6px);
   border: 1px solid rgba(255, 255, 255, 0.6);
@@ -37,6 +35,8 @@
   cursor: pointer;
   transition: background 0.2s ease, transform 0.2s ease;
   user-select: none;
+  font-size: 1em;
+  font-weight: bold;
 }
 
 .option:hover {
