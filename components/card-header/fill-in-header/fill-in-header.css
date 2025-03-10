@@ -1,6 +1,6 @@
 /* components/card-header/fill-in-header/fill-in-header.css */
 
-/* Overall container */
+/* 整体容器 */
 .fill-in-header-container {
   display: flex;
   flex-direction: column;
@@ -23,7 +23,6 @@
   align-items: flex-start;
   gap: 8px;
   white-space: nowrap;
-  width: auto;
 }
 
 /* left-part: 包含 letter-line 和 answer-line */
@@ -40,22 +39,27 @@
   align-items: flex-start;
 }
 
-/* letter-line: 主字母行，动态 font-size 控制 */
+/* letter-line: 主字母行，使用等宽字体 */
 .letter-line {
   display: inline-flex;
   gap: 2px;
+  /* 调整字母间距 */
   white-space: nowrap;
+  font-family: "Consolas", "DejaVu Sans Mono", "Lucida Console", "Andale Mono", monospace;
+  font-size: var(--letterFontSize, 32px);
 }
 
-/* answer-line: 正确答案行，紧贴题干 */
+/* answer-line: 正确答案行，同样使用等宽字体 */
 .answer-line {
   display: inline-flex;
   gap: 2px;
   white-space: nowrap;
   margin-top: 4px;
+  font-family: "Consolas", "DejaVu Sans Mono", "Lucida Console", "Andale Mono", monospace;
+  font-size: var(--letterFontSize, 32px);
 }
 
-/* 字母样式 */
+/* 通用字母样式 */
 .letter {
   font-weight: bold;
   text-align: center;
@@ -64,25 +68,33 @@
   vertical-align: baseline;
 }
 
-/* 给出的字母: 黑色, 无下划线 */
+/* 给出的字母：黑色，无下划线 */
 .letter.given {
   color: black;
   border-bottom: none;
 }
 
-/* 空缺字母: 默认改为黑色, 有黑色下划线 */
+/* 空缺字母：默认黑色，下划线显示 */
 .letter.blank {
   color: black;
   border-bottom: 2px solid black;
   position: relative;
 }
 
-/* 如果提交后错误，添加 error 类变成红色 */
+/* 错误状态：文字及下划线变红 */
 .letter.blank.error {
   color: red;
+  border-bottom: 2px solid red;
 }
 
-/* 聚焦时显示闪烁光标 (放在下方) */
+/* 焦点状态：移除默认 outline，添加圆角及自然高级的阴影 */
+.letter.blank:focus {
+  outline: none;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* 焦点时显示闪烁光标 */
 .letter.blank:focus::after {
   content: "";
   display: inline-block;
@@ -109,7 +121,7 @@
   }
 }
 
-/* answer-line 字母: 与题干同样大小, 无下划线 */
+/* 正确答案行中的字母：同题干，无下划线 */
 .letter-answer {
   font-weight: bold;
   text-align: center;
@@ -118,7 +130,7 @@
   border-bottom: none;
 }
 
-/* 提交按钮: 默认使用您提供的 SVG 图标，背景和边框去除 */
+/* 提交按钮 */
 .submit-btn {
   width: 36px;
   height: 36px;
@@ -142,7 +154,7 @@
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  margin: 24px 0px;
+  margin-top: 24px;
 }
 
 .definition-cn,
