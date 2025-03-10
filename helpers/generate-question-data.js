@@ -45,8 +45,6 @@ export const CHOICE_TYPES = [
  *    - antonyms: string[]  (数组，允许为空，但若为空则不出反义词题)
  *    - sentences: string[] (数组，允许为空，但对于 sentence 题型必有)
  *
- * 注意：correctWord 不是 CSV 原始数据，应在生成题目时根据 type 自动生成。
- *
  * @param {Array} entireVocabulary - 学习集数组
  * @param {string} [questionType] - 指定题型（若未指定，则随机选择 CHOICE_TYPES 中一种）
  * @param {Object} [currentItem] - 可选，如果提供，则使用它作为主词条，不随机选取
@@ -132,7 +130,8 @@ export function generateQuestionData(
       if (Array.isArray(item.sentences) && item.sentences.length > 0) {
         const sentence = pickRandom(item.sentences);
         if (sentence.toLowerCase().includes((item.word || "").toLowerCase())) {
-          questionText = replaceWordWithUnderscore(sentence, item.word);
+          // 始终使用 5 个下划线替换主词
+          questionText = sentence.replace(new RegExp(item.word, "gi"), "_____");
           correctAnswer = item.word || "???";
         } else {
           console.error("generateQuestionData: 句子中未找到主词", item);
@@ -186,24 +185,11 @@ function pickRandom(arr) {
 }
 
 /**
- * 替换 sentence 中出现 item.word（忽略大小写）的部分，
- * 替换为连续下划线（长度取决于主词去空格后的字符数，最少3个）
+ * （原来用于替换主词的函数，现在固定返回5个下划线）
  */
 function replaceWordWithUnderscore(sentence, word) {
-  const re = new RegExp(word, "gi");
-  const underscore = makeUnderscoreSegment(word);
-  const replaced = sentence.replace(re, underscore);
-  if (replaced === sentence) {
-    console.error("replaceWordWithUnderscore: 未匹配到主词，fallback");
-    return sentence.replace(/\w+/, "___");
-  }
-  return replaced;
-}
-
-function makeUnderscoreSegment(word) {
-  const stripped = word.replace(/\s+/g, "");
-  const len = Math.max(3, stripped.length);
-  return "_".repeat(len);
+  // 直接使用5个下划线
+  return sentence.replace(new RegExp(word, "gi"), "_____");
 }
 
 /**

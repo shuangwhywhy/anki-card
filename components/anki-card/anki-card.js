@@ -3,7 +3,7 @@ import "../card-header/fill-in-header/fill-in-header.js";
 import "../card-header/display-header/display-header.js";
 import "../card-header/choice-header/choice-header.js";
 
-// 更新：引入新的 helper 方法
+// 更新：引入新的 helper 方法（文件名：generate-question-data.js）
 import {
   ALL_TYPES,
   generateQuestionData,
@@ -264,7 +264,7 @@ class AnkiCard extends HTMLElement {
       const expectedTag = this._getExpectedHeaderTag(this._questionType);
       if (headerComp) {
         if (headerComp.tagName.toLowerCase() !== expectedTag) {
-          // 如果类型不一致，重新渲染整个 header 部分
+          // 类型不一致，重新渲染整个 header 部分
           this.render();
         } else {
           // 类型一致，直接更新数据
@@ -311,20 +311,21 @@ class AnkiCard extends HTMLElement {
 
   showPrev() {
     if (this._vocabulary.length <= 1) return;
-    // 左右切换：采用绕 y 轴旋转 180° 效果
+    // 左右切换：采用绕 Y 轴旋转 180° 效果，并在中途更新内容
     const cardEl = this._contentContainer.querySelector(".card-container");
     if (cardEl) {
       cardEl.style.transition = "transform 0.3s ease";
-      cardEl.style.transform = "rotateY(180deg)";
+      cardEl.style.transform = "rotateY(90deg)";
       setTimeout(() => {
         this._currentIndex =
           (this._currentIndex - 1 + this._vocabulary.length) %
           this._vocabulary.length;
-        // 重置动画状态
-        cardEl.style.transform = "rotateY(0deg)";
+        // 更新新题数据，并让新内容立刻显示
         this._questionType = null;
         this.render();
-      }, 300);
+        // 完成旋转回正
+        cardEl.style.transform = "rotateY(0deg)";
+      }, 150);
     } else {
       this._currentIndex =
         (this._currentIndex - 1 + this._vocabulary.length) %
@@ -339,13 +340,13 @@ class AnkiCard extends HTMLElement {
     const cardEl = this._contentContainer.querySelector(".card-container");
     if (cardEl) {
       cardEl.style.transition = "transform 0.3s ease";
-      cardEl.style.transform = "rotateY(180deg)";
+      cardEl.style.transform = "rotateY(90deg)";
       setTimeout(() => {
         this._currentIndex = (this._currentIndex + 1) % this._vocabulary.length;
-        cardEl.style.transform = "rotateY(0deg)";
         this._questionType = null;
         this.render();
-      }, 300);
+        cardEl.style.transform = "rotateY(0deg)";
+      }, 150);
     } else {
       this._currentIndex = (this._currentIndex + 1) % this._vocabulary.length;
       this._questionType = null;
