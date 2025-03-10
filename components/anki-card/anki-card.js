@@ -109,7 +109,7 @@ class AnkiCard extends HTMLElement {
       );
       const headerComp = this.shadowRoot.getElementById("header-comp");
       if (headerComp && typeof headerComp.setData === "function") {
-        console.log("[anki] headerComp.setData", questionData, headerComp);
+        console.log("[anki] headerComp.setData", questionData, headerComp, cur);
         headerComp.setData(questionData);
       }
     }
@@ -169,18 +169,24 @@ class AnkiCard extends HTMLElement {
           <div class="detail-row definition-en">
             ${cur.englishDefinition || ""}
           </div>
+          ${
+            cur.synonym && cur.synonym.length > 0
+              ? `
           <div class="synonyms-row">
             <span class="synonyms-label">近义词：</span>
-            <span class="synonyms">${
-              cur.synonyms ? cur.synonyms.join(", ") : ""
-            }</span>
-          </div>
+            <span class="synonyms">${cur.synonym.join(", ")}</span>
+          </div>`
+              : ""
+          }
+          ${
+            cur.antonym && cur.antonym.length > 0
+              ? `
           <div class="antonyms-row">
             <span class="antonyms-label">反义词：</span>
-            <span class="antonyms">${
-              cur.antonyms ? cur.antonyms.join(", ") : ""
-            }</span>
-          </div>
+            <span class="antonyms">${cur.antonym.join(", ")}</span>
+          </div>`
+              : ""
+          }
           <div class="examples">
             <div class="label">例句（点击切换）：</div>
             <div class="example-sentence">${this._currentExample}</div>

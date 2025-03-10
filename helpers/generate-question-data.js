@@ -41,8 +41,8 @@ export const CHOICE_TYPES = [
  *    - word: string
  *    - chineseDefinition: string
  *    - englishDefinition: string
- *    - synonyms: string[]  (数组，允许为空，但若为空则不出同义词题)
- *    - antonyms: string[]  (数组，允许为空，但若为空则不出反义词题)
+ *    - synonym: string[]  (数组，允许为空，但若为空则不出同义词题)
+ *    - antonym: string[]  (数组，允许为空，但若为空则不出反义词题)
  *    - sentences: string[] (数组，允许为空，但对于 sentence 题型必有)
  *
  * @param {Array} entireVocabulary - 学习集数组
@@ -81,7 +81,7 @@ export function generateQuestionData(
   // 3. 如果题型为 "synonym" 或 "antonym"，但当前词条对应数组为空，则随机选择其他题型
   if (
     questionType === "synonym" &&
-    (!Array.isArray(item.synonyms) || item.synonyms.length === 0)
+    (!Array.isArray(item.synonym) || item.synonym.length === 0)
   ) {
     const available = CHOICE_TYPES.filter((t) => t !== "synonym");
     const rand = Math.floor(Math.random() * available.length);
@@ -89,7 +89,7 @@ export function generateQuestionData(
   }
   if (
     questionType === "antonym" &&
-    (!Array.isArray(item.antonyms) || item.antonyms.length === 0)
+    (!Array.isArray(item.antonym) || item.antonym.length === 0)
   ) {
     const available = CHOICE_TYPES.filter((t) => t !== "antonym");
     const rand = Math.floor(Math.random() * available.length);
@@ -120,11 +120,11 @@ export function generateQuestionData(
       break;
     case "synonym":
       questionText = item.word || "???";
-      correctAnswer = pickRandom(item.synonyms);
+      correctAnswer = pickRandom(item.synonym);
       break;
     case "antonym":
       questionText = item.word || "???";
-      correctAnswer = pickRandom(item.antonyms);
+      correctAnswer = pickRandom(item.antonym);
       break;
     case "sentence":
       if (Array.isArray(item.sentences) && item.sentences.length > 0) {
@@ -229,13 +229,13 @@ function pickDistractors(
       break;
     case "synonym":
       extracted = candidates.flatMap((it) =>
-        Array.isArray(it.synonyms) ? it.synonyms : []
+        Array.isArray(it.synonym) ? it.synonym : []
       );
       extracted = extracted.filter((d) => !/^[A-Za-z0-9\s-]+$/.test(d));
       break;
     case "antonym":
       extracted = candidates.flatMap((it) =>
-        Array.isArray(it.antonyms) ? it.antonyms : []
+        Array.isArray(it.antonym) ? it.antonym : []
       );
       extracted = extracted.filter((d) => !/^[A-Za-z0-9\s-]+$/.test(d));
       break;
