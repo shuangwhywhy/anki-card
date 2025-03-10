@@ -18,7 +18,8 @@ body {
   /* 居中 main-container */
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
+  padding-top: 80px;
 }
 
 /* 背景动画 keyframes */

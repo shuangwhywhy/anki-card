@@ -7,7 +7,7 @@ class AnkiCard extends HTMLElement {
     super();
     this.attachShadow({ mode: "open" });
 
-    // 添加 CSS 链接，仅添加一次
+    // Add CSS link only once
     if (!this.shadowRoot.querySelector('link[rel="stylesheet"]')) {
       const linkElem = document.createElement("link");
       linkElem.setAttribute("rel", "stylesheet");
@@ -15,24 +15,24 @@ class AnkiCard extends HTMLElement {
       this.shadowRoot.appendChild(linkElem);
     }
 
-    // 创建一个固定的容器用于更新动态内容，不清空整个 shadowRoot
+    // Create a fixed container for dynamic updates (without clearing the entire shadowRoot)
     this._contentContainer = document.createElement("div");
     this.shadowRoot.appendChild(this._contentContainer);
 
-    // 数据相关
+    // Data related
     this._vocabulary = [];
     this._currentIndex = 0;
-    // 默认根据题型初始化详情显示状态，在 setData() 内会根据题型设置
+    // Details area visibility; for "display" type, details are shown, for others, hidden by default.
     this._detailVisible = true;
     this._currentExample = "";
-    this._questionType = null; // 题型
+    this._questionType = null; // question type
 
     this.render();
   }
 
   setData(data) {
     if (data && Array.isArray(data.vocabulary)) {
-      // 遍历词条，兼容可能的中文表头
+      // Process vocabulary entries; support possible Chinese headers
       this._vocabulary = this._shuffle(data.vocabulary).map((item) => {
         return {
           ...item,
@@ -71,7 +71,7 @@ class AnkiCard extends HTMLElement {
       this._currentExample = "";
       console.warn("anki-card setData => no valid data");
     }
-    // 重置题型和详情显示状态
+    // Reset question type and details visibility
     this._questionType = null;
     this.render();
   }
@@ -94,13 +94,13 @@ class AnkiCard extends HTMLElement {
     }
   }
 
-  // 随机选择题型，扩展题型数组包含 "display" 与其他
+  // Randomly choose question type; available types: "display" and "fill-in"
   _getHeaderTemplate() {
     if (!this._questionType) {
-      const types = ["display", "fill-in"]; // 可扩展更多题型
+      const types = ["display", "fill-in"];
       const rand = Math.floor(Math.random() * types.length);
       this._questionType = types[rand];
-      // 根据题型设置详情区域默认显示状态：display 默认展开，其它默认隐藏
+      // For "display", details are shown; for others, hidden by default.
       this._detailVisible = this._questionType === "display";
     }
     if (this._questionType === "fill-in") {
@@ -118,7 +118,7 @@ class AnkiCard extends HTMLElement {
     }
     const cur = this._vocabulary[this._currentIndex];
 
-    // 词性缩写逻辑：转换 pos 为简写
+    // Convert pos to abbreviation using a mapping
     const posMapping = {
       noun: "n.",
       verb: "v.",
@@ -136,15 +136,13 @@ class AnkiCard extends HTMLElement {
     const headerTemplate = this._getHeaderTemplate();
     const detailClass = this._detailVisible ? "" : " hidden";
 
-    // anki-card 仅渲染 header（由各 header 组件自行展示单词等）、
-    // 刷新按钮、详情区域（释义、近反义词、例句等）
     return `
       <div class="card-container">
-        <!-- Header 组件：由具体题型决定显示内容 -->
+        <!-- Header component: content depends on question type -->
         <div class="card-header">
           ${headerTemplate}
         </div>
-        <!-- 刷新按钮 -->
+        <!-- Refresh button -->
         <div class="card-refresh-btn" id="refresh-btn">
           <div class="icon">
             <svg viewBox="0 0 24 24">
@@ -152,7 +150,7 @@ class AnkiCard extends HTMLElement {
             </svg>
           </div>
         </div>
-        <!-- 详情区域：释义、近反义词、例句 -->
+        <!-- Details area: definitions, synonyms, antonyms, example sentence -->
         <div id="details-section" class="details-section${detailClass}">
           <div class="detail-row inline">
             <span class="phonetic">${cur.phonetic || ""}</span>
@@ -177,6 +175,7 @@ class AnkiCard extends HTMLElement {
             <div class="example-sentence">${this._currentExample}</div>
           </div>
         </div>
+        <!-- Toggle details button -->
         <div class="expand-more" id="expandMoreArea">
           <div class="expand-line"></div>
           <div class="expand-arrow">
@@ -193,7 +192,7 @@ class AnkiCard extends HTMLElement {
     this._contentContainer.innerHTML = this.getTemplate();
     this.bindEvents();
 
-    // 如果题型为 fill-in 或 display，则将当前单词数据传给 header 组件
+    // If question type is fill-in or display, pass current word data to header component
     if (this._questionType === "fill-in" || this._questionType === "display") {
       const headerComp = this.shadowRoot.getElementById("header-comp");
       if (headerComp && typeof headerComp.setData === "function") {
@@ -220,8 +219,9 @@ class AnkiCard extends HTMLElement {
     }
     const expandArea = this.shadowRoot.getElementById("expandMoreArea");
     if (expandArea) {
+      // Toggle details area on click (fixed to toggle instead of always showing)
       expandArea.addEventListener("click", () => {
-        this._detailVisible = true;
+        this._detailVisible = !this._detailVisible;
         this.render();
       });
     }
