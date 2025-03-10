@@ -33,16 +33,10 @@ class AnkiCard extends HTMLElement {
     // 初始字号（px），实际字号由 CSS 自定义属性控制
     this._fontSize = 32;
 
-    // 注意：不要在 constructor 中绑定 _handleClick，以免和 connectedCallback 重复绑定
-    // this._contentContainer.addEventListener("click", this._handleClick);
-
     // 初次渲染
     this.render();
   }
 
-  /**
-   * 恢复原先被误删的 connectedCallback 代码，且绑定事件只在这里执行一次
-   */
   connectedCallback() {
     // 使用事件委托绑定点击事件（只绑定一次）
     this._contentContainer.addEventListener(
@@ -314,20 +308,62 @@ class AnkiCard extends HTMLElement {
     }
   }
 
+  /**
+   * 新增：切换卡片时渐隐过渡
+   * 先为 .card-container 添加 fade-out，动画结束后再切换 index 并 render
+   */
   showPrev() {
     if (this._vocabulary.length <= 1) return;
-    this._currentIndex =
-      (this._currentIndex - 1 + this._vocabulary.length) %
-      this._vocabulary.length;
-    this._questionType = null;
-    this.render();
+    const cardContainer =
+      this._contentContainer.querySelector(".card-container");
+    if (cardContainer) {
+      cardContainer.classList.add("fade-out");
+      setTimeout(() => {
+        this._currentIndex =
+          (this._currentIndex - 1 + this._vocabulary.length) %
+          this._vocabulary.length;
+        this._questionType = null;
+        this.render();
+        // 渲染后移除 fade-out
+        const newCardContainer =
+          this._contentContainer.querySelector(".card-container");
+        if (newCardContainer) {
+          newCardContainer.classList.remove("fade-out");
+        }
+      }, 300);
+    } else {
+      // 如果未找到 cardContainer，直接切换
+      this._currentIndex =
+        (this._currentIndex - 1 + this._vocabulary.length) %
+        this._vocabulary.length;
+      this._questionType = null;
+      this.render();
+    }
   }
 
   showNext() {
     if (this._vocabulary.length <= 1) return;
-    this._currentIndex = (this._currentIndex + 1) % this._vocabulary.length;
-    this._questionType = null;
-    this.render();
+    const cardContainer =
+      this._contentContainer.querySelector(".card-container");
+    if (cardContainer) {
+      cardContainer.classList.add("fade-out");
+      setTimeout(() => {
+        this._currentIndex = (this._currentIndex + 1) % this._vocabulary.length;
+        this._questionType = null;
+        this.render();
+        // 渲染后移除 fade-out
+        const newCardContainer =
+          this._contentContainer.querySelector(".card-container");
+        if (newCardContainer) {
+          newCardContainer.classList.remove("fade-out");
+        }
+      }, 300);
+    } else {
+      // 如果未找到 cardContainer，直接切换
+      this._currentIndex = (this._currentIndex + 1) % this._vocabulary.length;
+      this._questionType = null;
+      this.render();
+    }
   }
 }
 

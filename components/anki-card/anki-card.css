@@ -34,6 +34,11 @@
   opacity: 1;
 }
 
+.fade-out {
+  transition: opacity 0.3s ease;
+  opacity: 0;
+}
+
 .card-header.fade-out {
   opacity: 0;
 }
