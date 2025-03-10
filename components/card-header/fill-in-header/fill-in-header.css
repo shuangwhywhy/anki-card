@@ -93,49 +93,21 @@
   animation: blink-border 1s infinite;
 }
 
-/* Remove the default blinking caret pseudo-element rule */
-/*
-.letter.blank:focus::after {
-  content: "";
-  display: inline-block;
-  width: 1px;
-  height: 1em;
-  background: black;
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  animation: blink-caret 1s infinite step-start;
-}
-*/
-
-/* Remove unused blink-caret keyframes */
-/*
-@keyframes blink-caret {
-  0%, 50% {
-    opacity: 1;
-  }
-  50.1%, 100% {
-    opacity: 0;
-  }
-}
-*/
-
 /* New blinking border-bottom and box-shadow animation */
 @keyframes blink-border {
   0% {
     border-bottom-color: black;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 0 4px 1px rgba(0, 0, 0, 0.2);
   }
 
   50% {
     border-bottom-color: #2196f3;
-    box-shadow: 0 2px 6px rgba(33, 150, 243, 0.6);
+    box-shadow: 0 0 10px 2px rgba(33, 150, 243, 0.8);
   }
 
   100% {
     border-bottom-color: black;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 0 4px 1px rgba(0, 0, 0, 0.2);
   }
 }
 
