@@ -1,6 +1,6 @@
 /* components/card-header/display-header/display-header.css */
 
-/* 整体容器 */
+/* 整体容器，水平居中，内容自适应 */
 .display-header-container {
   display: flex;
   justify-content: center;
@@ -8,13 +8,17 @@
   max-width: 100%;
   padding: 8px;
   overflow: hidden;
+  font-size: 32px;
+  /* 初始字号 */
 }
 
-/* 单词展示，自动适配字号，单行显示 */
+/* 单词展示 */
 .display-word {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   font-weight: bold;
   text-align: center;
+  letter-spacing: 0.5px;
+  /* 字母间距设置为 0.5px */
 }
