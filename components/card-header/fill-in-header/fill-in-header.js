@@ -15,7 +15,7 @@ class FillInHeader extends HTMLElement {
       this.shadowRoot.appendChild(linkElem);
     }
 
-    // Create main container for dynamic content
+    // Create container for dynamic content
     this._container = document.createElement("div");
     this.shadowRoot.appendChild(this._container);
 
@@ -30,7 +30,7 @@ class FillInHeader extends HTMLElement {
     // Submission state: null = not submitted, true = correct, false = incorrect
     this.submitStatus = null;
 
-    // Initial font size (px), dynamically adjusted
+    // Initial font size (px), to be adjusted dynamically
     this._fontSize = 32;
 
     this.render();
@@ -104,6 +104,7 @@ class FillInHeader extends HTMLElement {
   }
 
   _updateFontSizeProperty() {
+    // Set CSS custom property for font size so that CSS can use it (no inline font-size on individual elements)
     this._container.style.setProperty(
       "--letterFontSize",
       `${this._fontSize}px`
@@ -182,6 +183,7 @@ class FillInHeader extends HTMLElement {
 
   _triggerSubmit() {
     if (this.submitStatus !== null) {
+      // Already submitted: reset the letter blocks
       this._initLetterBlocks();
       this.submitStatus = null;
       this.render();
@@ -246,43 +248,17 @@ class FillInHeader extends HTMLElement {
       }
     }
 
-    // Decide button appearance based on submission status
-    let btnBg = "transparent";
-    let btnIcon = "";
+    // For the submit button, use classes instead of inline style.
+    let submitBtnClass = "submit-btn";
     if (this.submitStatus === true) {
-      btnBg = "green";
-      btnIcon = `
-        <svg viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
-          <g transform="translate(2.4,2.4) scale(0.8)">
-            <polyline points="20 6 9 17 4 12"/>
-          </g>
-        </svg>
-      `;
+      submitBtnClass += " btn-correct";
     } else if (this.submitStatus === false) {
-      btnBg = "red";
-      btnIcon = `
-        <svg viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
-          <g transform="translate(2.4,2.4) scale(0.8)">
-            <line x1="6" y1="6" x2="18" y2="18"/>
-            <line x1="6" y1="18" x2="18" y2="6"/>
-          </g>
-        </svg>
-      `;
+      submitBtnClass += " btn-incorrect";
     } else {
-      // Default state uses the provided SVG exactly
-      btnIcon = `
-        <svg viewBox="0 0 24 24" fill="none" stroke="#1041CF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
-          <g transform="scale(0.8)">
-            <path d="M20 16V8.5C20 7.67157 19.3587 7 18.5195 7C18 7 17 7.3 17 8.5V5.5C17 4.67157 16.3588 4 15.5195 4C15.013 4 14 4.3 14 5.5V3.5C14 2.67157 13.3588 2 12.5195 2C11.6803 2 11 2.67157 11 3.5V5.5C11 4.3 10.0065 4 9.5 4C8.66076 4 8 4.69115 8 5.51957L8.00004 14"/>
-            <path d="M11 5.5V11"/>
-            <path d="M14 5.5V11"/>
-            <path d="M17 5.5V11"/>
-            <path d="M20 16C20 20 16.866 22 13 22C9.13401 22 7.80428 21 4.80428 16L3.23281 13.3949C2.69684 12.5274 3.1259 11.4011 4.11416 11.0812C4.77908 10.866 5.51122 11.0881 5.93175 11.6326L8 14.0325"/>
-          </g>
-        </svg>
-      `;
+      submitBtnClass += " btn-default";
     }
 
+    // Build the question line (left: letter-line, right: submit button)
     const questionLine = `
       <div class="question-line">
         <div class="left-part">
@@ -292,8 +268,31 @@ class FillInHeader extends HTMLElement {
           ${this.submitStatus === false ? this._getCorrectAnswerHtml() : ""}
         </div>
         <div class="right-part">
-          <div class="submit-btn" id="submit-btn" style="background-color:${btnBg};">
-            ${btnIcon}
+          <div class="${submitBtnClass}" id="submit-btn">
+            ${
+              this.submitStatus === true
+                ? `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                     <g transform="translate(2.4,2.4) scale(0.8)">
+                       <polyline points="20 6 9 17 4 12"/>
+                     </g>
+                   </svg>`
+                : this.submitStatus === false
+                ? `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                     <g transform="translate(2.4,2.4) scale(0.8)">
+                       <line x1="6" y1="6" x2="18" y2="18"/>
+                       <line x1="6" y1="18" x2="18" y2="6"/>
+                     </g>
+                   </svg>`
+                : `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="#1041CF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                     <g transform="scale(0.8)">
+                       <path d="M20 16V8.5C20 7.67157 19.3587 7 18.5195 7C18 7 17 7.3 17 8.5V5.5C17 4.67157 16.3588 4 15.5195 4C15.013 4 14 4.3 14 5.5V3.5C14 2.67157 13.3588 2 12.5195 2C11.6803 2 11 2.67157 11 3.5V5.5C11 4.3 10.0065 4 9.5 4C8.66076 4 8 4.69115 8 5.51957L8.00004 14" />
+                       <path d="M11 5.5V11"/>
+                       <path d="M14 5.5V11"/>
+                       <path d="M17 5.5V11"/>
+                       <path d="M20 16C20 20 16.866 22 13 22C9.13401 22 7.80428 21 4.80428 16L3.23281 13.3949C2.69684 12.5274 3.1259 11.4011 4.11416 11.0812C4.77908 10.866 5.51122 11.0881 5.93175 11.6326L8 14.0325"/>
+                     </g>
+                   </svg>`
+            }
           </div>
         </div>
       </div>
@@ -336,6 +335,7 @@ class FillInHeader extends HTMLElement {
         this._triggerSubmit();
       });
     }
+    // Note: Toggle details functionality is removed from header.
   }
 }
 

@@ -148,6 +148,18 @@
   transform: scale(1.1);
 }
 
+.submit-btn.btn-default {
+  background-color: transparent;
+}
+
+.submit-btn.btn-correct {
+  background-color: green;
+}
+
+.submit-btn.btn-incorrect {
+  background-color: red;
+}
+
 /* 定义区 */
 .definition-area {
   display: flex;
