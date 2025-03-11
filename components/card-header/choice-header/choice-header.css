@@ -16,7 +16,7 @@
   word-wrap: break-word;
 }
 
-/* 新增：题干与选项之间的说明区域 */
+/* 题干与选项之间的说明区域 */
 .choice-explanation {
   text-align: center;
   font-size: 1.2em;
@@ -38,7 +38,6 @@
   width: 100%;
   max-width: 400px;
   margin: 0 auto;
-  /* 增加顶部空白距离 */
   margin-top: 20px;
 }
 
@@ -50,15 +49,19 @@
   border-radius: 200px;
   text-align: center;
   cursor: pointer;
-  transition: background 0.2s ease, transform 0.2s ease;
   user-select: none;
   font-size: 1em;
   font-weight: bold;
+  /* 添加默认阴影 */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .option:hover {
-  background: rgba(255, 255, 255, 0.6);
-  transform: scale(1.02);
+  background: rgba(255, 255, 255, 0.7);
+  transform: translateY(-3px) scale(1.02);
+  /* 增加悬停时阴影 */
+  box-shadow: 0 6px 8px rgba(0, 0, 0, 0.4);
 }
 
 .option.correct {

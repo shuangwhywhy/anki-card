@@ -11,51 +11,52 @@
   animation: fadeIn 0.2s forwards;
 }
 
-/* ========== 卡片 3D 扑克牌效果 ========== */
+/* ========== 卡片 3D 扑克牌效果（带视深效果） ========== */
 .flip-out-left {
   transform-origin: center left;
-  transform: perspective(1000px) rotateY(45deg) scale(0.9);
+  /* 调整为更大旋转角度与更明显缩放，产生近大远小效果 */
+  transform: rotateY(60deg) scale(0.6);
   opacity: 0;
-  transition: transform 0.2s ease, opacity 0.2s ease;
+  transition: transform 0.3s ease, opacity 0.3s ease;
 }
 
 .flip-out-right {
   transform-origin: center right;
-  transform: perspective(1000px) rotateY(-45deg) scale(0.9);
+  transform: rotateY(-60deg) scale(0.6);
   opacity: 0;
-  transition: transform 0.2s ease, opacity 0.2s ease;
+  transition: transform 0.3s ease, opacity 0.3s ease;
 }
 
 .flip-in-left {
   transform-origin: center left;
-  animation: flipInLeft 0.2s forwards;
+  animation: flipInLeft 0.3s forwards;
 }
 
 .flip-in-right {
   transform-origin: center right;
-  animation: flipInRight 0.2s forwards;
+  animation: flipInRight 0.3s forwards;
 }
 
 @keyframes flipInLeft {
   0% {
-    transform: perspective(1000px) rotateY(-45deg) scale(0.9);
+    transform: rotateY(-60deg) scale(0.6);
     opacity: 0;
   }
 
   100% {
-    transform: perspective(1000px) rotateY(0deg) scale(1);
+    transform: rotateY(0deg) scale(1);
     opacity: 1;
   }
 }
 
 @keyframes flipInRight {
   0% {
-    transform: perspective(1000px) rotateY(45deg) scale(0.9);
+    transform: rotateY(60deg) scale(0.6);
     opacity: 0;
   }
 
   100% {
-    transform: perspective(1000px) rotateY(0deg) scale(1);
+    transform: rotateY(0deg) scale(1);
     opacity: 1;
   }
 }
@@ -72,6 +73,11 @@
 }
 
 /* ========== 卡片整体容器 ========== */
+.card-wrapper {
+  perspective: 1000px;
+}
+
+/* ========== 卡片内部容器 ========== */
 .card-container {
   width: 400px;
   margin: 0 auto;
@@ -99,7 +105,6 @@
   color: #333;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   transform-style: preserve-3d;
-  /* 允许子元素使用 3D transform */
 }
 
 /* ========== 详情区域：max-height + opacity 实现渐变展开/收起 ========== */

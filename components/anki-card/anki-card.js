@@ -24,6 +24,7 @@ class AnkiCard extends HTMLElement {
 
     // 主容器
     this._contentContainer = document.createElement("div");
+    this._contentContainer.className = "card-wrapper";
     this.shadowRoot.appendChild(this._contentContainer);
 
     // 数据初始化
