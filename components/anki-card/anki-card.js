@@ -22,7 +22,7 @@ class AnkiCard extends HTMLElement {
       this.shadowRoot.appendChild(linkElem);
     }
 
-    // 主容器
+    // 创建主容器，并添加外层包装（用于 perspective）
     this._contentContainer = document.createElement("div");
     this._contentContainer.className = "card-wrapper";
     this.shadowRoot.appendChild(this._contentContainer);
@@ -30,7 +30,7 @@ class AnkiCard extends HTMLElement {
     // 数据初始化
     this._vocabulary = []; // 存放全部可用词汇
     this._currentIndex = 0;
-    // 对于 display 题型，详情区默认展开；其他类型默认收起
+    // 仅 display 类型默认展开详情，其它类型默认收起
     this._detailVisible = true;
     this._currentExample = "";
     this._questionType = null;
@@ -318,7 +318,7 @@ class AnkiCard extends HTMLElement {
 
   showPrev() {
     if (this._vocabulary.length <= 1) return;
-    // 左右切换：采用绕 Y 轴旋转 180° 效果，并在中途更新内容
+    // 左右切换：采用绕 Y 轴旋转 90° 效果，并在中途更新内容
     const cardEl = this._contentContainer.querySelector(".card-container");
     if (cardEl) {
       cardEl.style.transition = "transform 0.3s ease";
