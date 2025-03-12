@@ -32,11 +32,20 @@ export function openDB() {
         store.createIndex("uploadTime", "uploadTime", { unique: false });
         // 新增：展示次数索引
         store.createIndex("showCount", "showCount", { unique: false });
+        // NEW: 累计展示时长索引（单位：毫秒）
+        store.createIndex("displayDuration", "displayDuration", {
+          unique: false,
+        });
       } else {
-        // 若已存在，则检查是否有 showCount 索引，没有则创建
+        // 若已存在，则检查是否有 showCount 和 displayDuration 索引，没有则创建
         const store = evt.target.transaction.objectStore(VOCAB_STORE);
         if (!store.indexNames.contains("showCount")) {
           store.createIndex("showCount", "showCount", { unique: false });
+        }
+        if (!store.indexNames.contains("displayDuration")) {
+          store.createIndex("displayDuration", "displayDuration", {
+            unique: false,
+          });
         }
       }
 
@@ -71,6 +80,10 @@ export async function addVocabulary(vocab) {
     if (vocab.showCount === undefined) {
       vocab.showCount = 0;
     }
+    // NEW: 初始化累计展示时长为 0，如果未设置
+    if (vocab.displayDuration === undefined) {
+      vocab.displayDuration = 0;
+    }
     // 使用 put 操作实现增量更新：如果主键（word）已存在，则自动更新为新数据
     const r = store.put(vocab);
     r.onsuccess = () => resolve(true);
@@ -93,6 +106,33 @@ export async function updateShowCount(word, delta = 1) {
       const record = evt.target.result;
       if (record) {
         record.showCount = (record.showCount || 0) + delta;
+        const updateReq = store.put(record);
+        updateReq.onsuccess = () => resolve(true);
+        updateReq.onerror = (e) => reject(e.target.error);
+      } else {
+        reject(new Error("单词不存在"));
+      }
+    };
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+/**
+ * 更新指定单词的累计展示时长
+ * @param {string} word - 单词
+ * @param {number} additionalDuration - 新增的展示时长（毫秒）
+ */
+export async function updateDisplayDuration(word, additionalDuration) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(VOCAB_STORE, "readwrite");
+    const store = tx.objectStore(VOCAB_STORE);
+    const req = store.get(word);
+    req.onsuccess = (evt) => {
+      const record = evt.target.result;
+      if (record) {
+        record.displayDuration =
+          (record.displayDuration || 0) + additionalDuration;
         const updateReq = store.put(record);
         updateReq.onsuccess = () => resolve(true);
         updateReq.onerror = (e) => reject(e.target.error);
@@ -195,6 +235,10 @@ export async function importCSV(csvText, fileName) {
     // 初始化展示次数
     if (vocab.showCount === undefined) {
       vocab.showCount = 0;
+    }
+    // NEW: 初始化累计展示时长为 0，如果未设置
+    if (vocab.displayDuration === undefined) {
+      vocab.displayDuration = 0;
     }
 
     // 这里使用 put 操作，保证如果 word 已存在，则更新为新数据，实现增量更新
