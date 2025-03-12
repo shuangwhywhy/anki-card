@@ -3,8 +3,9 @@ console.log("db.js loaded");
 
 // IndexedDB 基本信息
 const DB_NAME = "ankiAppDB";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const VOCAB_STORE = "vocabulary";
+const HISTORY_STORE = "history";
 
 // 打开数据库
 export function openDB() {
@@ -12,6 +13,7 @@ export function openDB() {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onupgradeneeded = (evt) => {
       const db = evt.target.result;
+      // 创建或更新 vocabulary store
       if (!db.objectStoreNames.contains(VOCAB_STORE)) {
         const store = db.createObjectStore(VOCAB_STORE, { keyPath: "word" });
         // 基本索引（可根据需求增删）
@@ -28,6 +30,25 @@ export function openDB() {
         store.createIndex("sentences", "sentences", { unique: false });
         store.createIndex("uploadFile", "uploadFile", { unique: false });
         store.createIndex("uploadTime", "uploadTime", { unique: false });
+        // 新增：展示次数索引
+        store.createIndex("showCount", "showCount", { unique: false });
+      } else {
+        // 若已存在，则检查是否有 showCount 索引，没有则创建
+        const store = evt.target.transaction.objectStore(VOCAB_STORE);
+        if (!store.indexNames.contains("showCount")) {
+          store.createIndex("showCount", "showCount", { unique: false });
+        }
+      }
+
+      // 新建 history store 用于记录答题记录
+      if (!db.objectStoreNames.contains(HISTORY_STORE)) {
+        const historyStore = db.createObjectStore(HISTORY_STORE, {
+          keyPath: "id",
+          autoIncrement: true,
+        });
+        // 可根据需求创建索引，如按 word、答题时间等
+        historyStore.createIndex("word", "word", { unique: false });
+        historyStore.createIndex("answerTime", "answerTime", { unique: false });
       }
     };
     req.onsuccess = (evt) => {
@@ -40,15 +61,68 @@ export function openDB() {
   });
 }
 
-// 写入/更新一条记录
+// 写入/更新一条记录到 vocabulary store
 export async function addVocabulary(vocab) {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(VOCAB_STORE, "readwrite");
     const store = tx.objectStore(VOCAB_STORE);
-    const r = store.put(vocab); // 以 word 为主键，重复时覆盖
+    // 若未设置展示次数，则初始化为 0
+    if (vocab.showCount === undefined) {
+      vocab.showCount = 0;
+    }
+    // 使用 put 操作实现增量更新：如果主键（word）已存在，则自动更新为新数据
+    const r = store.put(vocab);
     r.onsuccess = () => resolve(true);
     r.onerror = (e) => reject(e.target.error);
+  });
+}
+
+/**
+ * 更新 vocabulary 中指定单词的展示次数
+ * @param {string} word - 单词
+ * @param {number} delta - 增量（正数表示增加）
+ */
+export async function updateShowCount(word, delta = 1) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(VOCAB_STORE, "readwrite");
+    const store = tx.objectStore(VOCAB_STORE);
+    const req = store.get(word);
+    req.onsuccess = (evt) => {
+      const record = evt.target.result;
+      if (record) {
+        record.showCount = (record.showCount || 0) + delta;
+        const updateReq = store.put(record);
+        updateReq.onsuccess = () => resolve(true);
+        updateReq.onerror = (e) => reject(e.target.error);
+      } else {
+        reject(new Error("单词不存在"));
+      }
+    };
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+/**
+ * 添加一条答题记录到 history store
+ * 记录内容包括：
+ * - vocabulary: 当前单词完整结构
+ * - questionData: 当前题目数据
+ * - answer: 用户答案
+ * - answerTime: 答题时间（时间戳）
+ * - errorCountBefore: 答题前错误次数
+ * - correctCountBefore: 答题前正确次数
+ * - currentShowCount: 当前单词展示次数
+ */
+export async function addHistoryRecord(record) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(HISTORY_STORE, "readwrite");
+    const store = tx.objectStore(HISTORY_STORE);
+    const req = store.add(record);
+    req.onsuccess = () => resolve(true);
+    req.onerror = (e) => reject(e.target.error);
   });
 }
 
@@ -118,10 +192,15 @@ export async function importCSV(csvText, fileName) {
     // 附加信息
     vocab.uploadFile = fileName;
     vocab.uploadTime = Date.now();
+    // 初始化展示次数
+    if (vocab.showCount === undefined) {
+      vocab.showCount = 0;
+    }
 
+    // 这里使用 put 操作，保证如果 word 已存在，则更新为新数据，实现增量更新
     if (vocab.word) {
       await addVocabulary(vocab);
-      console.log("Inserted word:", vocab.word);
+      console.log("Inserted/Updated word:", vocab.word);
     } else {
       console.log("Skipped row, no 'word':", cols);
     }
@@ -248,7 +327,6 @@ function parseCSVLine(line) {
   for (let i = 0; i < line.length; i++) {
     const char = line[i];
     if (char === '"') {
-      // 遇到 ""
       if (inQuotes && i + 1 < line.length && line[i + 1] === '"') {
         current += '"';
         i++;

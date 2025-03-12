@@ -8,6 +8,8 @@ import {
   ALL_TYPES,
   generateQuestionData,
 } from "../../helpers/generate-question-data.js";
+// 引入数据库接口，用于更新展示次数、记录答题记录
+import { updateShowCount, addHistoryRecord, addVocabulary } from "../../db.js";
 
 class AnkiCard extends HTMLElement {
   constructor() {
@@ -42,6 +44,11 @@ class AnkiCard extends HTMLElement {
 
     // 首次渲染
     this.render();
+
+    // 统一监听 header 组件发出的答题记录事件
+    this.shadowRoot.addEventListener("answerUpdated", (e) =>
+      this._handleRecordAnswer(e)
+    );
   }
 
   connectedCallback() {
@@ -91,6 +98,11 @@ class AnkiCard extends HTMLElement {
 
     const cur = this._vocabulary[this._currentIndex];
     if (!cur) return;
+
+    // 更新当前词的展示次数（异步更新，不阻塞界面）
+    updateShowCount(cur.word, 1).catch((err) =>
+      console.error("更新 showCount 失败", err)
+    );
 
     // 如果题型未定，则随机选择
     if (!this._questionType) {
@@ -358,6 +370,24 @@ class AnkiCard extends HTMLElement {
       this._currentIndex = (this._currentIndex + 1) % this._vocabulary.length;
       this._questionType = null;
       this.render();
+    }
+  }
+
+  /**
+   * 统一处理 header 组件派发的答题记录事件
+   * header 组件应在答题后通过事件向上抛出 recordAnswer 事件，事件 detail 包含完整记录数据
+   */
+  async _handleRecordAnswer(e) {
+    // e.detail 包含答题记录数据，要求的字段：vocabulary、questionData、answer、isCorrect、answerTime、
+    // correctCountBefore、errorCountBefore、currentShowCount
+    const record = e.detail;
+    if (!record) return;
+    // 同时更新当前 vocabulary 记录（例如：累积正确/错误次数），这里假设 header 组件已经传来记录前的计数
+    try {
+      await addHistoryRecord(record);
+      console.log("答题记录已保存", record);
+    } catch (err) {
+      console.error("保存答题记录失败", err);
     }
   }
 }

@@ -15,35 +15,34 @@ class FillInHeader extends HTMLElement {
       this.shadowRoot.appendChild(linkElem);
     }
 
-    // Create container for dynamic content
+    // 创建容器
     this._container = document.createElement("div");
+    this._container.classList.add("fill-in-header-container");
     this.shadowRoot.appendChild(this._container);
 
-    // Data initialization
+    // 数据初始化
     this.word = "";
-    this.letterBlocks = []; // Each item: { given: boolean, letter: string, userInput: string }
-    this.currentBlankIndex = 0;
-
     this.chineseDefinition = "";
     this.englishDefinition = "";
-
-    // Submission state: null = not submitted, true = correct, false = incorrect
-    this.submitStatus = null;
-
-    // Initial font size (px), to be adjusted dynamically
+    this.letterBlocks = []; // 每项：{ given: boolean, letter: string, userInput: string }
+    this.currentBlankIndex = 0;
+    this.submitStatus = null; // null: 未提交, true: 正确, false: 错误
     this._fontSize = 32;
+    // 保存完整题目数据（包括 vocabulary）
+    this._questionData = null;
 
     this.render();
   }
 
   /**
-   * setData({ word, chineseDefinition, englishDefinition, ... })
+   * setData({ word, chineseDefinition, englishDefinition, vocab })
    */
   setData(data) {
     if (!data || !data.word) return;
     this.word = data.word;
     this.chineseDefinition = data.chineseDefinition || "";
     this.englishDefinition = data.englishDefinition || "";
+    this._questionData = data;
     this._initLetterBlocks();
     this.submitStatus = null;
     this.render();
@@ -53,22 +52,19 @@ class FillInHeader extends HTMLElement {
     });
   }
 
-  // Randomly distribute given letters: randomly select givenCount indices; others remain blanks.
   _initLetterBlocks() {
     const n = this.word.length;
-    const ratio = 0.2 + Math.random() * 0.3; // 20%-50%
+    const ratio = 0.2 + Math.random() * 0.3; // 随机给定 20%-50%
     let givenCount = Math.max(1, Math.floor(n * ratio));
     if (givenCount >= n) {
-      givenCount = n - 1; // Ensure at least one blank
+      givenCount = n - 1;
     }
-    // Create an array of indices and shuffle
     const indices = Array.from({ length: n }, (_, i) => i);
     for (let i = n - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [indices[i], indices[j]] = [indices[j], indices[i]];
     }
     const givenIndices = new Set(indices.slice(0, givenCount));
-
     this.letterBlocks = [];
     for (let i = 0; i < n; i++) {
       if (givenIndices.has(i)) {
@@ -104,7 +100,6 @@ class FillInHeader extends HTMLElement {
   }
 
   _updateFontSizeProperty() {
-    // Set CSS custom property for font size so that CSS can use it (no inline font-size on individual elements)
     this._container.style.setProperty(
       "--letterFontSize",
       `${this._fontSize}px`
@@ -126,9 +121,7 @@ class FillInHeader extends HTMLElement {
       e.preventDefault();
       return;
     }
-    if (e.ctrlKey || e.metaKey || e.altKey) {
-      return;
-    }
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
     const block = this.letterBlocks[index];
     if (!block || block.given) return;
 
@@ -147,7 +140,6 @@ class FillInHeader extends HTMLElement {
       e.preventDefault();
       return;
     }
-
     if (e.key.length !== 1) return;
 
     if (/[a-zA-Z\-]/.test(e.key)) {
@@ -183,7 +175,7 @@ class FillInHeader extends HTMLElement {
 
   _triggerSubmit() {
     if (this.submitStatus !== null) {
-      // Already submitted: reset the letter blocks
+      // 已提交则重置
       this._initLetterBlocks();
       this.submitStatus = null;
       this.render();
@@ -196,7 +188,45 @@ class FillInHeader extends HTMLElement {
       this.submitStatus = correct;
       this.render();
       requestAnimationFrame(() => this._fitToWidth());
+
+      // 构造答题记录数据
+      const answerTime = Date.now();
+      let vocabRecord = this._questionData.vocab || {};
+      if (vocabRecord.correctCount === undefined) vocabRecord.correctCount = 0;
+      if (vocabRecord.errorCount === undefined) vocabRecord.errorCount = 0;
+      const correctCountBefore = vocabRecord.correctCount;
+      const errorCountBefore = vocabRecord.errorCount;
+      const currentShowCount = vocabRecord.showCount || 0;
+
+      // 更新计数
+      const record = {
+        vocabulary: vocabRecord,
+        questionData: this._questionData,
+        answer: this._getUserAnswer(), // 获取拼接后的答案字符串
+        isCorrect: correct,
+        answerTime: answerTime,
+        correctCountBefore: correctCountBefore,
+        errorCountBefore: errorCountBefore,
+        currentShowCount: currentShowCount,
+      };
+
+      // 派发事件 answerUpdated
+      this.dispatchEvent(
+        new CustomEvent("answerUpdated", {
+          detail: record,
+          bubbles: true,
+          composed: true,
+        })
+      );
     }
+  }
+
+  _getUserAnswer() {
+    // 拼接所有非给定字母的 userInput
+    return this.letterBlocks
+      .filter((b) => !b.given)
+      .map((b) => b.userInput)
+      .join("");
   }
 
   _checkAnswer() {
@@ -207,23 +237,6 @@ class FillInHeader extends HTMLElement {
       }
     }
     return true;
-  }
-
-  _getCorrectAnswerHtml() {
-    let html = `<div class="answer-line">`;
-    for (let i = 0; i < this.letterBlocks.length; i++) {
-      const b = this.letterBlocks[i];
-      let color = "green";
-      if (!b.given) {
-        color =
-          b.userInput.toLowerCase() === b.letter.toLowerCase()
-            ? "green"
-            : "red";
-      }
-      html += `<span class="letter-answer" data-index="${i}" style="color:${color};">${b.letter}</span>`;
-    }
-    html += `</div>`;
-    return html;
   }
 
   getTemplate() {
@@ -248,7 +261,6 @@ class FillInHeader extends HTMLElement {
       }
     }
 
-    // For the submit button, use classes instead of inline style.
     let submitBtnClass = "submit-btn";
     if (this.submitStatus === true) {
       submitBtnClass += " btn-correct";
@@ -258,7 +270,6 @@ class FillInHeader extends HTMLElement {
       submitBtnClass += " btn-default";
     }
 
-    // Build the question line (left: letter-line, right: submit button)
     const questionLine = `
       <div class="question-line">
         <div class="left-part">
@@ -315,6 +326,23 @@ class FillInHeader extends HTMLElement {
     `;
   }
 
+  _getCorrectAnswerHtml() {
+    let html = `<div class="answer-line">`;
+    for (let i = 0; i < this.letterBlocks.length; i++) {
+      const b = this.letterBlocks[i];
+      let color = "green";
+      if (!b.given) {
+        color =
+          b.userInput.toLowerCase() === b.letter.toLowerCase()
+            ? "green"
+            : "red";
+      }
+      html += `<span class="letter-answer" data-index="${i}" style="color:${color};">${b.letter}</span>`;
+    }
+    html += `</div>`;
+    return html;
+  }
+
   render() {
     this._container.innerHTML = this.getTemplate();
     this._updateFontSizeProperty();
@@ -335,7 +363,6 @@ class FillInHeader extends HTMLElement {
         this._triggerSubmit();
       });
     }
-    // Note: Toggle details functionality is removed from header.
   }
 }
 

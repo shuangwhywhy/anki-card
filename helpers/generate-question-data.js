@@ -146,7 +146,7 @@ export function generateQuestionData(
       break;
     default:
       questionText = item.word || "???";
-      correctAnswer = item.word || "";
+      correctAnswer = item.chineseDefinition || "暂无中文释义";
   }
 
   // 5. 生成干扰项（选项必须与 correctAnswer 同语言/同类型，不混杂）
@@ -196,7 +196,7 @@ function replaceWordWithUnderscore(sentence, word) {
  * 从整个学习集中过滤出干扰项：
  * 选项必须与 correctAnswer 同语言/同类型：
  *   - 如果 correctAnswer 含有中文，则只选含中文的；
- *   - 如果 correctAnswer 为纯英文，则只选纯英文的；
+ *   - 如果 correctAnswer 为纯英文，则只选纯英文的。这里对英文释义的正则放宽，允许常见标点。
  *   - 对于 sentence 类型，干扰项取 candidate.word，要求与 correctAnswer 同语言；
  * 排除当前 item 以及与 correctAnswer 相同的值。
  * 返回一个数组（可能不足3个）。
@@ -217,31 +217,36 @@ function pickDistractors(
       break;
     case "word-english":
       extracted = candidates.map((it) => it.englishDefinition).filter(Boolean);
-      extracted = extracted.filter((d) => /^[A-Za-z0-9\s-]+$/.test(d));
+      // 放宽英文释义正则，允许常见标点符号：.,;:'"-等
+      extracted = extracted.filter((d) => /^[A-Za-z0-9\s\.,;:'"\-]+$/.test(d));
       break;
     case "chinese-to-word":
       extracted = candidates.map((it) => it.word).filter(Boolean);
-      extracted = extracted.filter((d) => /^[A-Za-z0-9\s-]+$/.test(d));
+      // 此处以英文字母、数字、中文均允许
+      extracted = extracted.filter((d) =>
+        /^[A-Za-z0-9\s\u4e00-\u9fa5\-]+$/.test(d)
+      );
       break;
     case "english-to-word":
       extracted = candidates.map((it) => it.word).filter(Boolean);
-      extracted = extracted.filter((d) => /^[A-Za-z0-9\s-]+$/.test(d));
+      extracted = extracted.filter((d) => /^[A-Za-z0-9\s\.,;:'"\-]+$/.test(d));
       break;
     case "synonym":
       extracted = candidates.flatMap((it) =>
         Array.isArray(it.synonym) ? it.synonym : []
       );
-      extracted = extracted.filter((d) => !/^[A-Za-z0-9\s-]+$/.test(d));
+      // 对于同义词，假设英文同义词不含中文
+      extracted = extracted.filter((d) => !/[\u4e00-\u9fa5]/.test(d));
       break;
     case "antonym":
       extracted = candidates.flatMap((it) =>
         Array.isArray(it.antonym) ? it.antonym : []
       );
-      extracted = extracted.filter((d) => !/^[A-Za-z0-9\s-]+$/.test(d));
+      extracted = extracted.filter((d) => !/[\u4e00-\u9fa5]/.test(d));
       break;
     case "sentence":
       extracted = candidates.map((it) => it.word).filter(Boolean);
-      extracted = extracted.filter((d) => /^[A-Za-z0-9\s-]+$/.test(d));
+      extracted = extracted.filter((d) => /^[A-Za-z0-9\s\.,;:'"\-]+$/.test(d));
       break;
     default:
       extracted = candidates.map((it) => it.word).filter(Boolean);
