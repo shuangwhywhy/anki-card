@@ -3,7 +3,7 @@ console.log("db.js loaded");
 
 // IndexedDB 基本信息
 const DB_NAME = "ankiAppDB";
-const DB_VERSION = 2;
+const DB_VERSION = 1;
 const VOCAB_STORE = "vocabulary";
 const HISTORY_STORE = "history";
 
@@ -36,8 +36,10 @@ export function openDB() {
         store.createIndex("displayDuration", "displayDuration", {
           unique: false,
         });
+        // NEW: 熟悉度索引，取值范围 A/B/C/D
+        store.createIndex("familiarity", "familiarity", { unique: false });
       } else {
-        // 若已存在，则检查是否有 showCount 和 displayDuration 索引，没有则创建
+        // 若已存在，则检查是否有各项索引，没有则创建
         const store = evt.target.transaction.objectStore(VOCAB_STORE);
         if (!store.indexNames.contains("showCount")) {
           store.createIndex("showCount", "showCount", { unique: false });
@@ -46,6 +48,9 @@ export function openDB() {
           store.createIndex("displayDuration", "displayDuration", {
             unique: false,
           });
+        }
+        if (!store.indexNames.contains("familiarity")) {
+          store.createIndex("familiarity", "familiarity", { unique: false });
         }
       }
 
@@ -83,6 +88,10 @@ export async function addVocabulary(vocab) {
     // NEW: 初始化累计展示时长为 0，如果未设置
     if (vocab.displayDuration === undefined) {
       vocab.displayDuration = 0;
+    }
+    // NEW: 若未设置熟悉度，则默认设为 "A"（表示新词）
+    if (vocab.familiarity === undefined) {
+      vocab.familiarity = "A";
     }
     // 使用 put 操作实现增量更新：如果主键（word）已存在，则自动更新为新数据
     const r = store.put(vocab);
@@ -179,6 +188,8 @@ const headerMapping = {
   同义词: "synonym",
   反义词: "antonym",
   例句: "sentences",
+  // NEW: 分类映射为熟悉度
+  分类: "familiarity",
 };
 
 /**
@@ -239,6 +250,10 @@ export async function importCSV(csvText, fileName) {
     // NEW: 初始化累计展示时长为 0，如果未设置
     if (vocab.displayDuration === undefined) {
       vocab.displayDuration = 0;
+    }
+    // NEW: 若未设置熟悉度，则默认设为 "A"
+    if (vocab.familiarity === undefined) {
+      vocab.familiarity = "A";
     }
 
     // 这里使用 put 操作，保证如果 word 已存在，则更新为新数据，实现增量更新
