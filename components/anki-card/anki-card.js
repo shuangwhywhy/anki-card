@@ -3,12 +3,11 @@ import "../card-header/fill-in-header/fill-in-header.js";
 import "../card-header/display-header/display-header.js";
 import "../card-header/choice-header/choice-header.js";
 
-// 更新：引入新的 helper 方法（文件名：generate-question-data.js）
 import {
   ALL_TYPES,
   generateQuestionData,
+  getNextQuestionType,
 } from "../../helpers/generate-question-data.js";
-// 引入数据库接口，用于更新展示次数、记录答题记录、累计展示时长及 myScore 更新
 import {
   updateShowCount,
   updateDisplayDuration,
@@ -22,44 +21,33 @@ class AnkiCard extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
-
-    // 加载 CSS（只加载一次）
     if (!this.shadowRoot.querySelector('link[rel="stylesheet"]')) {
       const linkElem = document.createElement("link");
       linkElem.rel = "stylesheet";
       linkElem.href = "components/anki-card/anki-card.css";
       this.shadowRoot.appendChild(linkElem);
     }
-
-    // 创建主容器，并添加外层包装（用于 perspective）
     this._contentContainer = document.createElement("div");
     this._contentContainer.className = "card-wrapper";
     this.shadowRoot.appendChild(this._contentContainer);
 
-    // 数据初始化
-    this._vocabulary = []; // 存放全部可用词汇
+    this._vocabulary = [];
     this._currentIndex = 0;
-    // 仅 display 类型默认展开详情，其它类型默认收起
     this._detailVisible = true;
     this._currentExample = "";
     this._questionType = null;
 
-    // 缓存详情区元素（第一次 render 后设置）
     this._detailsSection = null;
-    // 初始字号（px）
     this._fontSize = 32;
 
-    // 新增：计时器变量，记录详情区展示时长（单位：毫秒）
     this.displayTimer = {
-      startTime: null, // 展开详情时的起始时间
-      accumulatedTime: 0, // 当前卡片累计展示时长
+      startTime: null,
+      accumulatedTime: 0,
     };
 
-    // 新增：用于 debounce 更新 myScore 的 pending 增量
     this.pendingDisplayIncrement = 0;
     this._debounceTimer = null;
 
-    // 新增：使用 Proxy 监听当前词汇数据和索引的变化
     this.cardState = {
       vocabulary: this._vocabulary,
       currentIndex: this._currentIndex,
@@ -67,7 +55,6 @@ class AnkiCard extends HTMLElement {
     this.stateProxy = new Proxy(this.cardState, {
       set: (target, prop, value) => {
         if (prop === "vocabulary" || prop === "currentIndex") {
-          // 在更新前先刷新当前累计展示时长，并触发 debounce 更新 myScore display count
           this._flushDisplayDuration();
           this._updateMyScoreDisplayDebounced();
         }
@@ -81,25 +68,21 @@ class AnkiCard extends HTMLElement {
       },
     });
 
-    // 新增：使用 Proxy 监听 _detailVisible 的变化（避免与原有逻辑耦合）
     this.detailProxy = new Proxy(
       { _detailVisible: this._detailVisible },
       {
         set: (target, prop, value) => {
           if (prop === "_detailVisible") {
-            // detail 展开时记录起始时间
             if (value === true && target[prop] === false) {
               this.displayTimer.startTime = Date.now();
-            }
-            // detail 关闭时仅记录时间，不更新数据库（更新操作放到卡片换词时进行）
-            else if (value === false && target[prop] === true) {
+            } else if (value === false && target[prop] === true) {
               if (this.displayTimer.startTime) {
                 const elapsed = Date.now() - this.displayTimer.startTime;
                 this.displayTimer.accumulatedTime += elapsed;
                 this.displayTimer.startTime = null;
                 console.log(
                   "[anki] displayTimer",
-                  JSON.parse(JSON.stringify(this.displayTimer))
+                  JSON.stringify(this.displayTimer)
                 );
               }
             }
@@ -112,10 +95,7 @@ class AnkiCard extends HTMLElement {
       }
     );
 
-    // 首次渲染
     this.render();
-
-    // 统一监听 header 组件发出的答题记录事件
     this.shadowRoot.addEventListener("answerUpdated", (e) =>
       this._handleRecordAnswer(e)
     );
@@ -129,10 +109,8 @@ class AnkiCard extends HTMLElement {
   }
 
   disconnectedCallback() {
-    // 当组件卸载前，立即更新数据库和 pending 显示次数
     this._flushDisplayDuration();
     if (this.pendingDisplayIncrement > 0) {
-      // 立即更新 pending 部分
       const cur = this._vocabulary[this._currentIndex];
       if (cur && cur.word && this._questionType) {
         updateMyScoreDisplay(
@@ -155,7 +133,6 @@ class AnkiCard extends HTMLElement {
 
   setData(data) {
     if (data && Array.isArray(data.vocabulary)) {
-      // 多个词条
       this.stateProxy.vocabulary = data.vocabulary;
       this.stateProxy.currentIndex = 0;
       if (data.vocabulary[0].sentences?.length) {
@@ -166,7 +143,6 @@ class AnkiCard extends HTMLElement {
         data.vocabulary.length
       );
     } else if (data && data.word) {
-      // 单个词条
       this.stateProxy.vocabulary = [data];
       this.stateProxy.currentIndex = 0;
       if (data.sentences?.length) {
@@ -179,9 +155,11 @@ class AnkiCard extends HTMLElement {
       this._currentExample = "";
       console.warn("anki-card setData => no valid data");
     }
-
-    // 重置题型
-    this._questionType = null;
+    const cur = this._vocabulary[this._currentIndex];
+    if (cur && cur.word) {
+      localStorage.setItem(cur.word, JSON.stringify({ state: "init" }));
+      this._questionType = getNextQuestionType(cur, false);
+    }
     this.render();
   }
 
@@ -190,37 +168,23 @@ class AnkiCard extends HTMLElement {
     this._detailsSection =
       this._contentContainer.querySelector("#details-section");
     this._updateFontSizeProperty();
-
     const cur = this._vocabulary[this._currentIndex];
     if (!cur) return;
-
-    // 更新当前词的展示次数（异步更新，不阻塞界面）
     updateShowCount(cur.word, 1).catch((err) =>
       console.error("更新 showCount 失败", err)
     );
-
-    // 每次展示题目时，立即累加本地 pending 展示次数
     this.pendingDisplayIncrement = (this.pendingDisplayIncrement || 0) + 1;
-    // 触发 debounce 更新 myScore 的展示次数
     this._updateMyScoreDisplayDebounced();
-
-    // 如果题型未定，则随机选择
     if (!this._questionType) {
-      const rand = Math.floor(Math.random() * ALL_TYPES.length);
-      this._questionType = ALL_TYPES[rand];
-      // 使用 Proxy 初始化 _detailVisible 状态：仅 display 题型默认展开详情
+      this._questionType = getNextQuestionType(cur, false);
       this.detailProxy._detailVisible = this._questionType === "display";
       this._detailVisible = this.detailProxy._detailVisible;
     }
-
-    // 调用 helper 生成最终题目数据，并传递给 header 组件
     if (ALL_TYPES.includes(this._questionType)) {
-      // 刷新时保持当前词，调用 helper 时传入当前词作为第三参数
-      const currentItem = this._vocabulary[this._currentIndex];
       const questionData = generateQuestionData(
         this._vocabulary,
         this._questionType,
-        currentItem
+        cur
       );
       const headerComp = this.shadowRoot.getElementById("header-comp");
       if (headerComp && typeof headerComp.setData === "function") {
@@ -234,7 +198,6 @@ class AnkiCard extends HTMLElement {
       return `<div class="card-container">No Data</div>`;
     }
     const cur = this._vocabulary[this._currentIndex];
-
     const posMapping = {
       noun: "n.",
       verb: "v.",
@@ -248,10 +211,8 @@ class AnkiCard extends HTMLElement {
     const posAbbrev = cur.pos
       ? posMapping[cur.pos.toLowerCase()] || cur.pos
       : "";
-
     const headerTemplate = this._getHeaderTemplate();
     const detailsClass = this._detailVisible ? "" : " hidden";
-
     const toggleArrowSVG = this._detailVisible
       ? `<svg viewBox="0 0 24 24">
            <polyline points="6 15 12 9 18 15" stroke="white" stroke-width="2" fill="none"/>
@@ -259,7 +220,6 @@ class AnkiCard extends HTMLElement {
       : `<svg viewBox="0 0 24 24">
            <polyline points="6 9 12 15 18 9" stroke="white" stroke-width="2" fill="none"/>
          </svg>`;
-
     return `
       <div class="card-container">
         <div class="card-header">
@@ -285,20 +245,18 @@ class AnkiCard extends HTMLElement {
           </div>
           ${
             cur.synonym && cur.synonym.length > 0
-              ? `
-          <div class="synonyms-row">
-            <span class="synonyms-label">近义词：</span>
-            <span class="synonyms">${cur.synonym.join(", ")}</span>
-          </div>`
+              ? `<div class="synonyms-row">
+                 <span class="synonyms-label">近义词：</span>
+                 <span class="synonyms">${cur.synonym.join(", ")}</span>
+               </div>`
               : ""
           }
           ${
             cur.antonym && cur.antonym.length > 0
-              ? `
-          <div class="antonyms-row">
-            <span class="antonyms-label">反义词：</span>
-            <span class="antonyms">${cur.antonym.join(", ")}</span>
-          </div>`
+              ? `<div class="antonyms-row">
+                 <span class="antonyms-label">反义词：</span>
+                 <span class="antonyms">${cur.antonym.join(", ")}</span>
+               </div>`
               : ""
           }
           <div class="examples">
@@ -318,13 +276,11 @@ class AnkiCard extends HTMLElement {
 
   _getHeaderTemplate() {
     if (!this._questionType) {
-      const rand = Math.floor(Math.random() * ALL_TYPES.length);
-      this._questionType = ALL_TYPES[rand];
+      const cur = this._vocabulary[this._currentIndex];
+      this._questionType = getNextQuestionType(cur, false);
     }
-    // 只有 display 题型默认展开详情，其余均隐藏
     this.detailProxy._detailVisible = this._questionType === "display";
     this._detailVisible = this.detailProxy._detailVisible;
-
     if (ALL_TYPES.includes(this._questionType)) {
       if (this._questionType === "fill-in") {
         return `<fill-in-header id="header-comp"></fill-in-header>`;
@@ -332,7 +288,6 @@ class AnkiCard extends HTMLElement {
       if (this._questionType === "display") {
         return `<display-header id="header-comp"></display-header>`;
       }
-      // 其余 7 种选择题由 choice-header 组件处理
       return `<choice-header id="header-comp" choice-type="${this._questionType}"></choice-header>`;
     }
     return `<div>[${this._questionType} placeholder]</div>`;
@@ -366,7 +321,6 @@ class AnkiCard extends HTMLElement {
 
   _toggleDetails() {
     if (!this._detailsSection) return;
-    // 仅切换详情区显示状态及视觉效果，不更新数据库
     this.detailProxy._detailVisible = !this.detailProxy._detailVisible;
     this._detailVisible = this.detailProxy._detailVisible;
     this._detailsSection.classList.toggle("hidden", !this._detailVisible);
@@ -380,43 +334,29 @@ class AnkiCard extends HTMLElement {
   }
 
   _refresh() {
-    // 基于当前词重新生成题目，不改变当前索引；同样适用于“刷新当前词汇集”
     const cur = this._vocabulary[this._currentIndex];
     if (cur) {
-      let newType;
-      do {
-        newType = ALL_TYPES[Math.floor(Math.random() * ALL_TYPES.length)];
-      } while (newType === this._questionType);
-      this._questionType = newType;
-      this.detailProxy._detailVisible = newType === "display";
+      // 刷新操作：多刷题型
+      this._questionType = getNextQuestionType(cur, true);
+      this.detailProxy._detailVisible = this._questionType === "display";
       this._detailVisible = this.detailProxy._detailVisible;
-      // 刷新时基于当前词调用 helper：传入 currentItem
       const questionData = generateQuestionData(
         this._vocabulary,
         this._questionType,
         cur
       );
       const headerComp = this.shadowRoot.getElementById("header-comp");
-      const expectedTag = this._getExpectedHeaderTag(this._questionType);
+      const expectedTag = this._getHeaderTemplate();
       if (headerComp) {
         if (headerComp.tagName.toLowerCase() !== expectedTag) {
-          // 类型不一致，重新渲染整个 header 部分
           this.render();
         } else {
-          // 类型一致，直接更新数据
           headerComp.setData(questionData);
         }
       } else {
         this.render();
       }
     }
-  }
-
-  _getExpectedHeaderTag(type) {
-    if (type === "fill-in") return "fill-in-header";
-    if (type === "display") return "display-header";
-    // 其余 7 种选择题统一由 choice-header 组件处理
-    return "choice-header";
   }
 
   _randomizeExample() {
@@ -433,11 +373,9 @@ class AnkiCard extends HTMLElement {
   }
 
   async _flushDisplayDuration() {
-    // 如果详情区仍处于展开状态，则先计算当前时长
     if (this.detailProxy._detailVisible && this.displayTimer.startTime) {
       const elapsed = Date.now() - this.displayTimer.startTime;
       this.displayTimer.accumulatedTime += elapsed;
-      // 将详情区状态置为关闭（但不改变视觉效果，由卡片切换时 render 刷新）
       this.detailProxy._detailVisible = false;
       this._detailVisible = false;
       if (this._detailsSection) {
@@ -446,16 +384,11 @@ class AnkiCard extends HTMLElement {
       this.displayTimer.startTime = null;
       console.log(
         "[anki] word changed, previous not finished",
-        JSON.parse(JSON.stringify(this.displayTimer))
+        JSON.stringify(this.displayTimer)
       );
     }
-    // 若有累计时长，立即更新数据库
     if (this.displayTimer.accumulatedTime > 0) {
       try {
-        console.log(
-          "[anki] updating displayTime",
-          JSON.parse(JSON.stringify(this.displayTimer))
-        );
         await updateDisplayDuration(
           this._vocabulary[this._currentIndex].word,
           this.displayTimer.accumulatedTime
@@ -469,7 +402,6 @@ class AnkiCard extends HTMLElement {
         console.error("Error updating display duration:", err);
       }
     }
-    // 重置计时器
     this.displayTimer.accumulatedTime = 0;
   }
 
@@ -501,11 +433,8 @@ class AnkiCard extends HTMLElement {
 
   async showPrev() {
     if (this._vocabulary.length <= 1) return;
-    // 在切换前立即更新数据库
     await this._flushDisplayDuration();
-    // 同时将 debounce pending 更新也触发
     this._updateMyScoreDisplayDebounced();
-    // 左右切换：采用绕 Y 轴旋转 90° 效果，并在中途更新内容
     const cardEl = this._contentContainer.querySelector(".card-container");
     if (cardEl) {
       cardEl.style.transition = "transform 0.3s ease";
@@ -514,10 +443,8 @@ class AnkiCard extends HTMLElement {
         this.stateProxy.currentIndex =
           (this._currentIndex - 1 + this._vocabulary.length) %
           this._vocabulary.length;
-        // 更新新题数据，并让新内容立刻显示
         this._questionType = null;
         this.render();
-        // 完成旋转回正
         cardEl.style.transform = "rotateY(0deg)";
       }, 150);
     } else {
@@ -531,9 +458,7 @@ class AnkiCard extends HTMLElement {
 
   async showNext() {
     if (this._vocabulary.length <= 1) return;
-    // 在切换前立即更新数据库
     await this._flushDisplayDuration();
-    // 同时将 debounce pending 更新也触发
     this._updateMyScoreDisplayDebounced();
     const cardEl = this._contentContainer.querySelector(".card-container");
     if (cardEl) {
@@ -554,19 +479,12 @@ class AnkiCard extends HTMLElement {
     }
   }
 
-  /**
-   * 统一处理 header 组件派发的答题记录事件
-   * header 组件应在答题后通过事件向上抛出 recordAnswer 事件，事件 detail 包含完整记录数据
-   */
   async _handleRecordAnswer(e) {
-    // e.detail 包含答题记录数据，要求的字段：vocabulary、questionData、answer、isCorrect、answerTime、
-    // correctCountBefore、errorCountBefore、currentShowCount
     const record = e.detail;
     if (!record) return;
     try {
       await addHistoryRecord(record);
       console.log("答题记录已保存", record);
-      // 获取有效的单词 key；如果 record.vocabulary.word 缺失，则采用当前卡片的单词
       let wordKey = null;
       if (record.vocabulary && record.vocabulary.word) {
         wordKey = record.vocabulary.word;
@@ -596,7 +514,6 @@ class AnkiCard extends HTMLElement {
             record.isCorrect
         );
       }
-      // 正确答案更新：立即更新
       await updateMyScore(
         wordKey,
         record.questionData.questionType,

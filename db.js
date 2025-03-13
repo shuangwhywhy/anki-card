@@ -20,7 +20,9 @@ const DEFAULT_MY_SCORE = {
   display: [0],
 };
 
-// 打开数据库
+/**
+ * 打开数据库
+ */
 export function openDB() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
@@ -29,7 +31,7 @@ export function openDB() {
       // 创建或更新 vocabulary store
       if (!db.objectStoreNames.contains(VOCAB_STORE)) {
         const store = db.createObjectStore(VOCAB_STORE, { keyPath: "word" });
-        // 基本索引（可根据需求增删）
+        // 基本索引
         store.createIndex("pos", "pos", { unique: false });
         store.createIndex("phonetic", "phonetic", { unique: false });
         store.createIndex("chineseDefinition", "chineseDefinition", {
@@ -43,17 +45,14 @@ export function openDB() {
         store.createIndex("sentences", "sentences", { unique: false });
         store.createIndex("uploadFile", "uploadFile", { unique: false });
         store.createIndex("uploadTime", "uploadTime", { unique: false });
-        // 新增：展示次数索引
         store.createIndex("showCount", "showCount", { unique: false });
-        // NEW: 累计展示时长索引（单位：毫秒）
         store.createIndex("displayDuration", "displayDuration", {
           unique: false,
         });
-        // NEW: 熟悉度索引，取值范围 A/B/C/D
         store.createIndex("familiarity", "familiarity", { unique: false });
-        // myScore 字段直接存储在记录中，不创建索引
+        // NEW: 选词权重，取值范围 [0.1, 1]
+        store.createIndex("wordWeight", "wordWeight", { unique: false });
       } else {
-        // 若已存在，则检查是否有各项索引，没有则创建
         const store = evt.target.transaction.objectStore(VOCAB_STORE);
         if (!store.indexNames.contains("showCount")) {
           store.createIndex("showCount", "showCount", { unique: false });
@@ -66,15 +65,17 @@ export function openDB() {
         if (!store.indexNames.contains("familiarity")) {
           store.createIndex("familiarity", "familiarity", { unique: false });
         }
+        if (!store.indexNames.contains("wordWeight")) {
+          store.createIndex("wordWeight", "wordWeight", { unique: false });
+        }
       }
 
-      // 新建 history store 用于记录答题记录
+      // 创建 history store
       if (!db.objectStoreNames.contains(HISTORY_STORE)) {
         const historyStore = db.createObjectStore(HISTORY_STORE, {
           keyPath: "id",
           autoIncrement: true,
         });
-        // 可根据需求创建索引，如按 word、答题时间等
         historyStore.createIndex("word", "word", { unique: false });
         historyStore.createIndex("answerTime", "answerTime", { unique: false });
       }
@@ -89,29 +90,30 @@ export function openDB() {
   });
 }
 
-// 写入/更新一条记录到 vocabulary store
+/**
+ * 写入/更新一条记录到 vocabulary store
+ */
 export async function addVocabulary(vocab) {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(VOCAB_STORE, "readwrite");
     const store = tx.objectStore(VOCAB_STORE);
-    // 若未设置展示次数，则初始化为 0
     if (vocab.showCount === undefined) {
       vocab.showCount = 0;
     }
-    // NEW: 初始化累计展示时长为 0，如果未设置
     if (vocab.displayDuration === undefined) {
       vocab.displayDuration = 0;
     }
-    // NEW: 若未设置熟悉度，则默认设为 "A"（表示新词）
     if (vocab.familiarity === undefined) {
       vocab.familiarity = "A";
     }
-    // NEW: 若未设置 myScore，则初始化为默认值
     if (vocab.myScore === undefined) {
       vocab.myScore = { ...DEFAULT_MY_SCORE };
     }
-    // 使用 put 操作实现增量更新：如果主键（word）已存在，则自动更新为新数据
+    // NEW: 若未设置 wordWeight，则计算并设置初始权重
+    if (vocab.wordWeight === undefined) {
+      vocab.wordWeight = computeWordWeight(vocab);
+    }
     const r = store.put(vocab);
     r.onsuccess = () => resolve(true);
     r.onerror = (e) => reject(e.target.error);
@@ -120,8 +122,6 @@ export async function addVocabulary(vocab) {
 
 /**
  * 更新 vocabulary 中指定单词的展示次数
- * @param {string} word - 单词
- * @param {number} delta - 增量（正数表示增加）
  */
 export async function updateShowCount(word, delta = 1) {
   const db = await openDB();
@@ -133,6 +133,8 @@ export async function updateShowCount(word, delta = 1) {
       const record = evt.target.result;
       if (record) {
         record.showCount = (record.showCount || 0) + delta;
+        // 更新选词权重
+        record.wordWeight = computeWordWeight(record);
         const updateReq = store.put(record);
         updateReq.onsuccess = () => resolve(true);
         updateReq.onerror = (e) => reject(e.target.error);
@@ -146,8 +148,6 @@ export async function updateShowCount(word, delta = 1) {
 
 /**
  * 更新指定单词的累计展示时长
- * @param {string} word - 单词
- * @param {number} additionalDuration - 新增的展示时长（毫秒）
  */
 export async function updateDisplayDuration(word, additionalDuration) {
   const db = await openDB();
@@ -160,6 +160,8 @@ export async function updateDisplayDuration(word, additionalDuration) {
       if (record) {
         record.displayDuration =
           (record.displayDuration || 0) + additionalDuration;
+        // 更新选词权重
+        record.wordWeight = computeWordWeight(record);
         const updateReq = store.put(record);
         updateReq.onsuccess = () => resolve(true);
         updateReq.onerror = (e) => reject(e.target.error);
@@ -173,9 +175,6 @@ export async function updateDisplayDuration(word, additionalDuration) {
 
 /**
  * 更新指定单词的 myScore 信息中的“累计展示次数”
- * @param {string} word - 单词（必须有效）
- * @param {string} questionType - 题型（例如 "word-chinese", "fill-in", 等）
- * @param {number} delta - 累加展示次数（正数）
  */
 export async function updateMyScoreDisplay(word, questionType, delta) {
   const db = await openDB();
@@ -203,6 +202,8 @@ export async function updateMyScoreDisplay(word, questionType, delta) {
                 record.myScore[questionType][0]
               : 0;
         }
+        // 更新选词权重
+        record.wordWeight = computeWordWeight(record);
         const updateReq = store.put(record);
         updateReq.onsuccess = () => resolve(true);
         updateReq.onerror = (e) => reject(e.target.error);
@@ -216,9 +217,6 @@ export async function updateMyScoreDisplay(word, questionType, delta) {
 
 /**
  * 更新指定单词的 myScore 信息（正确次数更新）
- * @param {string} word - 单词（必须有效）
- * @param {string} questionType - 题型（例如 "word-chinese", "fill-in", 等）
- * @param {boolean} isCorrect - 答案是否正确
  */
 export async function updateMyScore(word, questionType, isCorrect) {
   return new Promise(async (resolve, reject) => {
@@ -237,7 +235,6 @@ export async function updateMyScore(word, questionType, isCorrect) {
           record.myScore = { ...DEFAULT_MY_SCORE };
         }
         if (questionType === "display") {
-          // 对于 display 类型，只更新展示次数（正确数恒等于展示数，正确率始终为 1）
           record.myScore["display"][0] =
             (record.myScore["display"][0] || 0) + 1;
         } else {
@@ -254,6 +251,8 @@ export async function updateMyScore(word, questionType, isCorrect) {
                 record.myScore[questionType][0]
               : 0;
         }
+        // 更新选词权重
+        record.wordWeight = computeWordWeight(record);
         const updateReq = store.put(record);
         updateReq.onsuccess = () => resolve(true);
         updateReq.onerror = (e) => reject(e.target.error);
@@ -267,14 +266,6 @@ export async function updateMyScore(word, questionType, isCorrect) {
 
 /**
  * 添加一条答题记录到 history store
- * 记录内容包括：
- * - vocabulary: 当前单词完整结构
- * - questionData: 当前题目数据
- * - answer: 用户答案
- * - answerTime: 答题时间（时间戳）
- * - errorCountBefore: 答题前错误次数
- * - correctCountBefore: 答题前正确次数
- * - currentShowCount: 当前单词展示次数
  */
 export async function addHistoryRecord(record) {
   const db = await openDB();
@@ -288,8 +279,75 @@ export async function addHistoryRecord(record) {
 }
 
 /**
+ * 计算单词的选词权重
+ * 基于熟悉度（采用指数级递减）、展示次数、累计展示时长以及正确率（仅统计展示次数>=10的题型）
+ * 返回值范围在 [0.1, 1]
+ */
+export function computeWordWeight(wordObj) {
+  // 指数级基础权重：定义熟悉度等级数值
+  const famLevels = { A: 0, B: 1, C: 2, D: 3 };
+  const k = 0.5; // 可调节常数，越大衰减越快
+  let fam = wordObj.familiarity;
+  let base = famLevels.hasOwnProperty(fam)
+    ? Math.exp(-k * famLevels[fam])
+    : 1.0;
+
+  let showCount = wordObj.showCount || 0;
+  let durationMin = (wordObj.displayDuration || 0) / 60000; // 转换为分钟
+  let alpha = 0.1;
+  let beta = 0.5;
+  let F_disp = 1 / (1 + alpha * (showCount + beta * durationMin));
+
+  let correctRate = 1;
+  if (wordObj.myScore) {
+    let minRate = 1;
+    let found = false;
+    for (let key in wordObj.myScore) {
+      if (key === "display") continue;
+      let data = wordObj.myScore[key]; // [展示次数, 正确次数, 正确率]
+      if (data[0] >= 10) {
+        found = true;
+        if (data[2] < minRate) {
+          minRate = data[2];
+        }
+      }
+    }
+    if (found) correctRate = minRate;
+  }
+  // 采用 2 - correctRate 使得正确率越高（接近 1）时 F_correct 越小
+  let F_correct = 2 - correctRate;
+  let weight = base * F_disp * F_correct;
+  if (weight < 0.1) weight = 0.1;
+  if (weight > 1) weight = 1;
+  return weight;
+}
+
+/**
+ * 更新指定单词的选词权重
+ */
+export async function updateWordWeight(word, wordObj) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(VOCAB_STORE, "readwrite");
+    const store = tx.objectStore(VOCAB_STORE);
+    const req = store.get(word);
+    req.onsuccess = (evt) => {
+      const record = evt.target.result;
+      if (record) {
+        record.wordWeight = computeWordWeight(record);
+        const updateReq = store.put(record);
+        updateReq.onsuccess = () => resolve(true);
+        updateReq.onerror = (e) => reject(e.target.error);
+      } else {
+        reject(new Error("单词不存在"));
+      }
+    };
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+/**
  * 中文表头 -> 系统字段映射
- * 如需更多列名，请自行补充
  */
 const headerMapping = {
   单词: "word",
@@ -300,79 +358,62 @@ const headerMapping = {
   同义词: "synonym",
   反义词: "antonym",
   例句: "sentences",
-  // NEW: 分类映射为熟悉度
   分类: "familiarity",
 };
 
 /**
- * 导入 CSV：解析含引号、逗号、多行例句
- * 使用中文表头映射 -> 系统字段
+ * 导入 CSV：解析含引号、逗号、多行例句，并按表头映射为系统字段
  */
 export async function importCSV(csvText, fileName) {
   console.log("importCSV -> file:", fileName);
-
   const rows = parseCSV(csvText);
   if (rows.length < 2) {
     console.log("CSV 行数不足2行");
     return;
   }
-  // 第 0 行表头
   let rawHeaders = rows[0].map((h) => h.trim());
   console.log("Parsed raw headers:", rawHeaders);
-
-  // 将中文表头映射为系统字段
   const mappedHeaders = rawHeaders.map((header) => {
     return headerMapping[header] || "";
   });
   console.log("mappedHeaders:", mappedHeaders);
-
-  // 其余行为数据
   for (let i = 1; i < rows.length; i++) {
     const cols = rows[i];
     if (!cols || cols.length === 0) continue;
     let vocab = {};
-
     for (let c = 0; c < mappedHeaders.length; c++) {
       const field = mappedHeaders[c];
-      if (!field) continue; // 未匹配的列跳过
+      if (!field) continue;
       let val = cols[c] || "";
-
       if (field === "sentences") {
-        // 多行例句 -> 换行拆分
         vocab.sentences = val
           .split(/\r?\n/)
           .map((x) => x.trim())
           .filter(Boolean);
       } else if (field === "synonym" || field === "antonym") {
-        // 同义词/反义词 -> 按逗号或分号拆分
         vocab[field] = splitByCommaOrSemicolon(val);
       } else {
-        // 普通字段
         vocab[field] = val;
       }
     }
-
-    // 附加信息
     vocab.uploadFile = fileName;
     vocab.uploadTime = Date.now();
-    // 初始化展示次数
     if (vocab.showCount === undefined) {
       vocab.showCount = 0;
     }
-    // NEW: 初始化累计展示时长为 0，如果未设置
     if (vocab.displayDuration === undefined) {
       vocab.displayDuration = 0;
     }
-    // NEW: 若未设置熟悉度，则默认设为 "A"
     if (vocab.familiarity === undefined) {
       vocab.familiarity = "A";
     }
-    // NEW: 若未设置 myScore，则初始化为默认值
     if (vocab.myScore === undefined) {
       vocab.myScore = { ...DEFAULT_MY_SCORE };
     }
-
-    // 这里使用 put 操作，保证如果 word 已存在，则更新为新数据，实现增量更新
+    // 初始化选词权重
+    if (vocab.word && vocab.wordWeight === undefined) {
+      vocab.wordWeight = computeWordWeight(vocab);
+    }
     if (vocab.word) {
       await addVocabulary(vocab);
       console.log("Inserted/Updated word:", vocab.word);
@@ -392,7 +433,6 @@ export async function getRandomVocabulary(limit = 50) {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(VOCAB_STORE, "readonly");
     const store = tx.objectStore(VOCAB_STORE);
-
     const countReq = store.count();
     countReq.onsuccess = () => {
       const total = countReq.result;
@@ -409,7 +449,6 @@ export async function getRandomVocabulary(limit = 50) {
         }
       }
       randomIndices.sort((a, b) => a - b);
-
       let results = [];
       let currentIndex = 0;
       const cursorReq = store.openCursor();
@@ -441,7 +480,6 @@ export async function getAllWordsByFile(fileName) {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(VOCAB_STORE, "readonly");
     const store = tx.objectStore(VOCAB_STORE);
-
     let matched = [];
     const req = store.openCursor();
     req.onsuccess = (evt) => {
@@ -468,13 +506,12 @@ function splitByCommaOrSemicolon(str) {
     .filter(Boolean);
 }
 
-/** 解析逗号+引号包裹的 CSV，多行例句 */
+/** 解析 CSV，多行例句 */
 function parseCSV(text) {
   const rawLines = text.split(/\r?\n/);
   let finalLines = [];
   let tempLine = "";
   let inQuotes = false;
-
   for (let i = 0; i < rawLines.length; i++) {
     let line = rawLines[i];
     tempLine += tempLine === "" ? line : "\n" + line;
@@ -488,17 +525,15 @@ function parseCSV(text) {
   if (tempLine) {
     finalLines.push(tempLine);
   }
-
   const rows = finalLines.map((l) => parseCSVLine(l));
   return rows;
 }
 
-/** 逐字符解析一行，支持引号转义 "" */
+/** 逐字符解析一行 */
 function parseCSVLine(line) {
   const result = [];
   let current = "";
   let inQuotes = false;
-
   for (let i = 0; i < line.length; i++) {
     const char = line[i];
     if (char === '"') {
