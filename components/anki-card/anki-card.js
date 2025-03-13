@@ -8,12 +8,13 @@ import {
   ALL_TYPES,
   generateQuestionData,
 } from "../../helpers/generate-question-data.js";
-// 引入数据库接口，用于更新展示次数、记录答题记录及累计展示时长
+// 引入数据库接口，用于更新展示次数、记录答题记录、累计展示时长及 myScore 更新
 import {
   updateShowCount,
   updateDisplayDuration,
   addHistoryRecord,
   addVocabulary,
+  updateMyScore,
 } from "../../db.js";
 
 class AnkiCard extends HTMLElement {
@@ -500,13 +501,62 @@ class AnkiCard extends HTMLElement {
     // e.detail 包含答题记录数据，要求的字段：vocabulary、questionData、answer、isCorrect、answerTime、
     // correctCountBefore、errorCountBefore、currentShowCount
     const record = e.detail;
-    if (!record) return;
-    // 同时更新当前 vocabulary 记录（例如：累积正确/错误次数），这里假设 header 组件已经传来记录前的计数
+    if (!record) {
+      throw new Error(
+        "Fatal Error: 答题记录为空，详细信息：" + JSON.stringify(e)
+      );
+    }
     try {
       await addHistoryRecord(record);
       console.log("答题记录已保存", record);
+      // 获取有效的单词 key：首先尝试 record.vocabulary.word，否则尝试当前卡片的单词
+      let wordKey = null;
+      if (record.vocabulary && record.vocabulary.word) {
+        wordKey = record.vocabulary.word;
+      } else if (
+        this._vocabulary[this._currentIndex] &&
+        this._vocabulary[this._currentIndex].word
+      ) {
+        wordKey = this._vocabulary[this._currentIndex].word;
+      }
+      if (!wordKey) {
+        // 输出完整 debug 信息，包含 record、当前卡片状态等信息
+        throw new Error(
+          "Fatal Error: 缺少有效的 vocabulary.word。详细调试信息：" +
+            "\nrecord.vocabulary: " +
+            JSON.stringify(record.vocabulary) +
+            "\n当前卡片: " +
+            JSON.stringify(this._vocabulary[this._currentIndex])
+        );
+      }
+      if (
+        !record.questionData ||
+        !record.questionData.questionType ||
+        typeof record.isCorrect !== "boolean"
+      ) {
+        throw new Error(
+          "Fatal Error: 更新 myScore 所需的必要信息缺失。" +
+            "\nrecord.questionData: " +
+            JSON.stringify(record.questionData) +
+            "\nrecord.isCorrect: " +
+            record.isCorrect
+        );
+      }
+      await updateMyScore(
+        wordKey,
+        record.questionData.questionType,
+        record.isCorrect
+      );
+      console.log(
+        `myScore updated for ${wordKey} on ${record.questionData.questionType}`
+      );
     } catch (err) {
-      console.error("保存答题记录失败", err);
+      console.error(
+        "保存答题记录失败，详细调试信息：",
+        err,
+        "\nRecord详细信息：" + JSON.stringify(record)
+      );
+      throw err;
     }
   }
 }

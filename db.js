@@ -7,6 +7,19 @@ const DB_VERSION = 1;
 const VOCAB_STORE = "vocabulary";
 const HISTORY_STORE = "history";
 
+// 默认 myScore 对象
+const DEFAULT_MY_SCORE = {
+  "word-chinese": [0, 0, 0],
+  "word-english": [0, 0, 0],
+  "chinese-to-word": [0, 0, 0],
+  "english-to-word": [0, 0, 0],
+  synonym: [0, 0, 0],
+  antonym: [0, 0, 0],
+  sentence: [0, 0, 0],
+  "fill-in": [0, 0, 0],
+  display: [0],
+};
+
 // 打开数据库
 export function openDB() {
   return new Promise((resolve, reject) => {
@@ -38,6 +51,7 @@ export function openDB() {
         });
         // NEW: 熟悉度索引，取值范围 A/B/C/D
         store.createIndex("familiarity", "familiarity", { unique: false });
+        // myScore 字段直接存储在记录中，不创建索引
       } else {
         // 若已存在，则检查是否有各项索引，没有则创建
         const store = evt.target.transaction.objectStore(VOCAB_STORE);
@@ -93,6 +107,10 @@ export async function addVocabulary(vocab) {
     if (vocab.familiarity === undefined) {
       vocab.familiarity = "A";
     }
+    // NEW: 若未设置 myScore，则初始化为默认值
+    if (vocab.myScore === undefined) {
+      vocab.myScore = { ...DEFAULT_MY_SCORE };
+    }
     // 使用 put 操作实现增量更新：如果主键（word）已存在，则自动更新为新数据
     const r = store.put(vocab);
     r.onsuccess = () => resolve(true);
@@ -142,6 +160,57 @@ export async function updateDisplayDuration(word, additionalDuration) {
       if (record) {
         record.displayDuration =
           (record.displayDuration || 0) + additionalDuration;
+        const updateReq = store.put(record);
+        updateReq.onsuccess = () => resolve(true);
+        updateReq.onerror = (e) => reject(e.target.error);
+      } else {
+        reject(new Error("单词不存在"));
+      }
+    };
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+/**
+ * 更新指定单词的 myScore 信息
+ * @param {string} word - 单词（必须有效）
+ * @param {string} questionType - 题型（例如 "word-chinese", "fill-in", 等）
+ * @param {boolean} isCorrect - 答案是否正确
+ */
+export async function updateMyScore(word, questionType, isCorrect) {
+  return new Promise(async (resolve, reject) => {
+    if (!word) {
+      reject(new Error("Invalid key provided for updateMyScore"));
+      return;
+    }
+    const db = await openDB();
+    const tx = db.transaction(VOCAB_STORE, "readwrite");
+    const store = tx.objectStore(VOCAB_STORE);
+    const req = store.get(word);
+    req.onsuccess = (evt) => {
+      const record = evt.target.result;
+      if (record) {
+        if (!record.myScore) {
+          record.myScore = { ...DEFAULT_MY_SCORE };
+        }
+        if (questionType === "display") {
+          // 对于 display 类型，只更新展示次数（正确数恒等于展示数，正确率始终为 1）
+          record.myScore["display"][0] =
+            (record.myScore["display"][0] || 0) + 1;
+        } else {
+          if (!record.myScore[questionType]) {
+            record.myScore[questionType] = [0, 0, 0];
+          }
+          record.myScore[questionType][0] += 1;
+          if (isCorrect) {
+            record.myScore[questionType][1] += 1;
+          }
+          record.myScore[questionType][2] =
+            record.myScore[questionType][0] > 0
+              ? record.myScore[questionType][1] /
+                record.myScore[questionType][0]
+              : 0;
+        }
         const updateReq = store.put(record);
         updateReq.onsuccess = () => resolve(true);
         updateReq.onerror = (e) => reject(e.target.error);
@@ -254,6 +323,10 @@ export async function importCSV(csvText, fileName) {
     // NEW: 若未设置熟悉度，则默认设为 "A"
     if (vocab.familiarity === undefined) {
       vocab.familiarity = "A";
+    }
+    // NEW: 若未设置 myScore，则初始化为默认值
+    if (vocab.myScore === undefined) {
+      vocab.myScore = { ...DEFAULT_MY_SCORE };
     }
 
     // 这里使用 put 操作，保证如果 word 已存在，则更新为新数据，实现增量更新

@@ -82,7 +82,7 @@ class ChoiceHeader extends HTMLElement {
         explanation = `Please choose the correct <span class="highlight">antonym</span>.`;
         break;
       case "sentence":
-        explanation = `Please choose the correct word to fill in the blank in the sentence.`;
+        explanation = `Please choose the <span class="highlight">correct word</span> to fill in the blank in the sentence.`;
         break;
       default:
         explanation = "";
