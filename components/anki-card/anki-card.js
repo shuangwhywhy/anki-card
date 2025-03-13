@@ -15,6 +15,7 @@ import {
   addHistoryRecord,
   addVocabulary,
   updateMyScore,
+  updateMyScoreDisplay,
 } from "../../db.js";
 
 class AnkiCard extends HTMLElement {
@@ -54,6 +55,10 @@ class AnkiCard extends HTMLElement {
       accumulatedTime: 0, // 当前卡片累计展示时长
     };
 
+    // 新增：用于 debounce 更新 myScore 的 pending 增量
+    this.pendingDisplayIncrement = 0;
+    this._debounceTimer = null;
+
     // 新增：使用 Proxy 监听当前词汇数据和索引的变化
     this.cardState = {
       vocabulary: this._vocabulary,
@@ -62,8 +67,9 @@ class AnkiCard extends HTMLElement {
     this.stateProxy = new Proxy(this.cardState, {
       set: (target, prop, value) => {
         if (prop === "vocabulary" || prop === "currentIndex") {
-          // 在更新前先刷新当前累计展示时长
+          // 在更新前先刷新当前累计展示时长，并触发 debounce 更新 myScore display count
           this._flushDisplayDuration();
+          this._updateMyScoreDisplayDebounced();
         }
         target[prop] = value;
         if (prop === "vocabulary") {
@@ -123,8 +129,28 @@ class AnkiCard extends HTMLElement {
   }
 
   disconnectedCallback() {
-    // 当组件卸载前，立即更新数据库
+    // 当组件卸载前，立即更新数据库和 pending 显示次数
     this._flushDisplayDuration();
+    if (this.pendingDisplayIncrement > 0) {
+      // 立即更新 pending 部分
+      const cur = this._vocabulary[this._currentIndex];
+      if (cur && cur.word && this._questionType) {
+        updateMyScoreDisplay(
+          cur.word,
+          this._questionType,
+          this.pendingDisplayIncrement
+        )
+          .then(() => {
+            console.log(
+              `Final myScore display updated for ${cur.word} on ${this._questionType} by ${this.pendingDisplayIncrement}`
+            );
+            this.pendingDisplayIncrement = 0;
+          })
+          .catch((err) =>
+            console.error("Final updateMyScoreDisplay error", err)
+          );
+      }
+    }
   }
 
   setData(data) {
@@ -172,6 +198,11 @@ class AnkiCard extends HTMLElement {
     updateShowCount(cur.word, 1).catch((err) =>
       console.error("更新 showCount 失败", err)
     );
+
+    // 每次展示题目时，立即累加本地 pending 展示次数
+    this.pendingDisplayIncrement = (this.pendingDisplayIncrement || 0) + 1;
+    // 触发 debounce 更新 myScore 的展示次数
+    this._updateMyScoreDisplayDebounced();
 
     // 如果题型未定，则随机选择
     if (!this._questionType) {
@@ -442,10 +473,38 @@ class AnkiCard extends HTMLElement {
     this.displayTimer.accumulatedTime = 0;
   }
 
+  _updateMyScoreDisplayDebounced() {
+    if (this._debounceTimer) {
+      clearTimeout(this._debounceTimer);
+    }
+    this._debounceTimer = setTimeout(() => {
+      const cur = this._vocabulary[this._currentIndex];
+      if (cur && cur.word && this._questionType) {
+        updateMyScoreDisplay(
+          cur.word,
+          this._questionType,
+          this.pendingDisplayIncrement
+        )
+          .then(() => {
+            console.log(
+              `[anki] Debounced myScore display count updated for ${cur.word} on ${this._questionType} by ${this.pendingDisplayIncrement}`
+            );
+            this.pendingDisplayIncrement = 0;
+          })
+          .catch((err) =>
+            console.error("[anki] Debounced updateMyScoreDisplay error", err)
+          );
+      }
+      this._debounceTimer = null;
+    }, 500);
+  }
+
   async showPrev() {
     if (this._vocabulary.length <= 1) return;
     // 在切换前立即更新数据库
     await this._flushDisplayDuration();
+    // 同时将 debounce pending 更新也触发
+    this._updateMyScoreDisplayDebounced();
     // 左右切换：采用绕 Y 轴旋转 90° 效果，并在中途更新内容
     const cardEl = this._contentContainer.querySelector(".card-container");
     if (cardEl) {
@@ -474,6 +533,8 @@ class AnkiCard extends HTMLElement {
     if (this._vocabulary.length <= 1) return;
     // 在切换前立即更新数据库
     await this._flushDisplayDuration();
+    // 同时将 debounce pending 更新也触发
+    this._updateMyScoreDisplayDebounced();
     const cardEl = this._contentContainer.querySelector(".card-container");
     if (cardEl) {
       cardEl.style.transition = "transform 0.3s ease";
@@ -501,15 +562,11 @@ class AnkiCard extends HTMLElement {
     // e.detail 包含答题记录数据，要求的字段：vocabulary、questionData、answer、isCorrect、answerTime、
     // correctCountBefore、errorCountBefore、currentShowCount
     const record = e.detail;
-    if (!record) {
-      throw new Error(
-        "Fatal Error: 答题记录为空，详细信息：" + JSON.stringify(e)
-      );
-    }
+    if (!record) return;
     try {
       await addHistoryRecord(record);
       console.log("答题记录已保存", record);
-      // 获取有效的单词 key：首先尝试 record.vocabulary.word，否则尝试当前卡片的单词
+      // 获取有效的单词 key；如果 record.vocabulary.word 缺失，则采用当前卡片的单词
       let wordKey = null;
       if (record.vocabulary && record.vocabulary.word) {
         wordKey = record.vocabulary.word;
@@ -520,10 +577,8 @@ class AnkiCard extends HTMLElement {
         wordKey = this._vocabulary[this._currentIndex].word;
       }
       if (!wordKey) {
-        // 输出完整 debug 信息，包含 record、当前卡片状态等信息
         throw new Error(
-          "Fatal Error: 缺少有效的 vocabulary.word。详细调试信息：" +
-            "\nrecord.vocabulary: " +
+          "Fatal Error: 缺少有效的 vocabulary.word。\nrecord.vocabulary: " +
             JSON.stringify(record.vocabulary) +
             "\n当前卡片: " +
             JSON.stringify(this._vocabulary[this._currentIndex])
@@ -535,13 +590,13 @@ class AnkiCard extends HTMLElement {
         typeof record.isCorrect !== "boolean"
       ) {
         throw new Error(
-          "Fatal Error: 更新 myScore 所需的必要信息缺失。" +
-            "\nrecord.questionData: " +
+          "Fatal Error: 更新 myScore 所需的必要信息缺失。\nrecord.questionData: " +
             JSON.stringify(record.questionData) +
             "\nrecord.isCorrect: " +
             record.isCorrect
         );
       }
+      // 正确答案更新：立即更新
       await updateMyScore(
         wordKey,
         record.questionData.questionType,

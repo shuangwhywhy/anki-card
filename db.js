@@ -172,7 +172,50 @@ export async function updateDisplayDuration(word, additionalDuration) {
 }
 
 /**
- * 更新指定单词的 myScore 信息
+ * 更新指定单词的 myScore 信息中的“累计展示次数”
+ * @param {string} word - 单词（必须有效）
+ * @param {string} questionType - 题型（例如 "word-chinese", "fill-in", 等）
+ * @param {number} delta - 累加展示次数（正数）
+ */
+export async function updateMyScoreDisplay(word, questionType, delta) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(VOCAB_STORE, "readwrite");
+    const store = tx.objectStore(VOCAB_STORE);
+    const req = store.get(word);
+    req.onsuccess = (evt) => {
+      const record = evt.target.result;
+      if (record) {
+        if (!record.myScore) {
+          record.myScore = { ...DEFAULT_MY_SCORE };
+        }
+        if (questionType === "display") {
+          record.myScore["display"][0] =
+            (record.myScore["display"][0] || 0) + delta;
+        } else {
+          if (!record.myScore[questionType]) {
+            record.myScore[questionType] = [0, 0, 0];
+          }
+          record.myScore[questionType][0] += delta;
+          record.myScore[questionType][2] =
+            record.myScore[questionType][0] > 0
+              ? record.myScore[questionType][1] /
+                record.myScore[questionType][0]
+              : 0;
+        }
+        const updateReq = store.put(record);
+        updateReq.onsuccess = () => resolve(true);
+        updateReq.onerror = (e) => reject(e.target.error);
+      } else {
+        reject(new Error("单词不存在"));
+      }
+    };
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+/**
+ * 更新指定单词的 myScore 信息（正确次数更新）
  * @param {string} word - 单词（必须有效）
  * @param {string} questionType - 题型（例如 "word-chinese", "fill-in", 等）
  * @param {boolean} isCorrect - 答案是否正确
