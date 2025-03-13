@@ -553,3 +553,20 @@ function parseCSVLine(line) {
   result.push(current);
   return result;
 }
+
+/**
+ * 删除 vocabulary store 中的所有词汇记录
+ */
+export async function deleteAllVocabulary() {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(VOCAB_STORE, "readwrite");
+    const store = tx.objectStore(VOCAB_STORE);
+    const req = store.clear();
+    req.onsuccess = () => {
+      console.log("All vocabulary deleted from database.");
+      resolve(true);
+    };
+    req.onerror = (e) => reject(e.target.error);
+  });
+}

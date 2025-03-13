@@ -106,6 +106,24 @@ class AnkiCard extends HTMLElement {
       "click",
       this._handleClick.bind(this)
     );
+    // 绑定菜单上删除所有词汇的按钮（假设全局页面中该按钮 id 为 "delete-all-btn"）
+    const deleteBtn = document.getElementById("delete-all-btn");
+    if (deleteBtn) {
+      deleteBtn.addEventListener("click", async () => {
+        if (confirm("确定要清空所有词汇吗？")) {
+          try {
+            await import("../../db.js").then((module) =>
+              module.deleteAllVocabulary()
+            );
+            console.log("所有词汇已删除");
+            this._vocabulary = [];
+            this.render();
+          } catch (err) {
+            console.error("删除所有词汇失败", err);
+          }
+        }
+      });
+    }
   }
 
   disconnectedCallback() {
@@ -336,7 +354,6 @@ class AnkiCard extends HTMLElement {
   _refresh() {
     const cur = this._vocabulary[this._currentIndex];
     if (cur) {
-      // 刷新操作：多刷题型
       this._questionType = getNextQuestionType(cur, true);
       this.detailProxy._detailVisible = this._questionType === "display";
       this._detailVisible = this.detailProxy._detailVisible;

@@ -23,7 +23,7 @@ export const CHOICE_TYPES = [
 ];
 
 /**
- * 从整个学习集 entireVocabulary 中随机生成一道选择题。
+ * 从整个学习集 entireVocabulary 中生成一道选择题。
  * 如果传入 currentItem，则使用它作为主词条，不随机选取。
  *
  * @param {Array} entireVocabulary - 学习集数组
@@ -196,26 +196,33 @@ function shuffle(arr) {
   return a;
 }
 
-/* ===============================
-   以下为题型选择逻辑函数
-   根据伪代码中的 state 逻辑实现
-   =============================== */
+/* ==================================================
+   以下为题型选择逻辑函数，基于 state 逻辑实现
+   ================================================== */
 
 /**
- * 根据 wordObj.familiarity 和 localStorage 中的 state 决定下次出题的题型。
+ * 根据 wordObj.familiarity 和 localStorage 中保存的 state 决定下次出题的题型。
  * isRefresh 为 true 表示刷新操作（多刷题型），false 表示切换进入（首刷题型）。
  */
 export function getNextQuestionType(wordObj, isRefresh = false) {
-  if (!wordObj || !wordObj.word) return pickRandom(ALL_TYPES);
-  let localData = JSON.parse(
-    localStorage.getItem(wordObj.word) || '{"state": "init"}'
+  if (!wordObj || !wordObj.word) {
+    console.log("getNextQuestionType: wordObj无效，返回随机题型");
+    return pickRandom(ALL_TYPES);
+  }
+  let stored = localStorage.getItem(wordObj.word);
+  let localData = stored ? JSON.parse(stored) : { state: "init" };
+  console.log(
+    "getNextQuestionType: 初始state =",
+    localData,
+    "word =",
+    wordObj.word
   );
   let ret = null;
   if (isRefresh) {
-    // 刷新操作直接返回随机题型（多刷题型逻辑）
-    return pickRandom(ALL_TYPES);
+    ret = pickRandom(ALL_TYPES);
+    console.log("getNextQuestionType: 刷新操作，返回随机题型 =", ret);
+    return ret;
   }
-  // 非刷新操作：切换进入，按照 state 逻辑处理
   switch (wordObj.familiarity) {
     case "A":
       ret = getQuestionForA(wordObj, localData);
@@ -234,64 +241,102 @@ export function getNextQuestionType(wordObj, isRefresh = false) {
       break;
   }
   localStorage.setItem(wordObj.word, JSON.stringify(localData));
+  console.log("getNextQuestionType: 最终state =", localData, "返回题型 =", ret);
   return ret;
 }
 
 /**
  * familarity = A 逻辑：
- * 伪代码：
- *   if (state == 'init') { state = 'nextup'; ret = 'display'; }
- *   if (state == 'nextup' && overallCorrectRate(wordObj) < 0.2) { state = 'again'; ret = 'display'; }
- *   if (state == 'again') { state = 'random'; ret = getHighestErrorType(wordObj); }
- *   默认返回随机题型。
+ * 1. 如果 state 为 "init"，则将 state 设为 "nextup"，返回 "display"（首刷默认）
+ * 2. 如果 state 为 "nextup" 且整体正确率（仅统计展示次数>=10）小于 0.2，则将 state 设为 "again"，返回 "display"（触发次刷）
+ * 3. 如果 state 为 "again"，则设为 "random"，返回错误率最高的题型
+ * 默认返回随机题型。
  */
 function getQuestionForA(wordObj, localData) {
   let ret = null;
+  console.log("getQuestionForA: 初始state =", localData.state);
   switch (localData.state) {
     case "init":
       localData.state = "nextup";
+      console.log("getQuestionForA: state从init转换到nextup");
       ret = "display";
-    // 不 break，继续执行下去
+      console.log("getQuestionForA: 首刷返回display");
+    // 无 break，继续进入 nextup
     case "nextup":
+      console.log(
+        "getQuestionForA: 进入nextup判断, overallCorrectRate =",
+        getOverallCorrectRate(wordObj)
+      );
       if (getOverallCorrectRate(wordObj) < 0.2) {
         localData.state = "again";
         ret = "display";
+        console.log(
+          "getQuestionForA: overallCorrectRate < 0.2, state转换为again, 返回display"
+        );
         return ret;
       }
-      if (ret) return ret;
+      if (ret) {
+        console.log("getQuestionForA: nextup阶段返回ret =", ret);
+        return ret;
+      }
+      console.log("getQuestionForA: nextup阶段未命中条件，返回随机题型");
       return pickRandom(ALL_TYPES);
     case "again":
       localData.state = "random";
+      console.log(
+        "getQuestionForA: state为again，转换为random, 返回错误率最高的题型"
+      );
       return getHighestErrorType(wordObj);
     default:
+      console.log("getQuestionForA: 未命中特定state，返回随机题型");
       return pickRandom(ALL_TYPES);
   }
 }
 
 /**
- * familarity = B 的逻辑（示例，您可按需求完善）
+ * familarity = B 的逻辑（完善后可根据具体需求调整）
  */
 function getQuestionForB(wordObj, localData) {
-  // 示例：直接返回随机题型
+  console.log(
+    "getQuestionForB: 当前state =",
+    localData.state,
+    "word =",
+    wordObj.word
+  );
+  localData.state = "random";
   return pickRandom(ALL_TYPES);
 }
 
 /**
- * familarity = C 的逻辑（示例）
+ * familarity = C 的逻辑（完善后可根据具体需求调整）
  */
 function getQuestionForC(wordObj, localData) {
+  console.log(
+    "getQuestionForC: 当前state =",
+    localData.state,
+    "word =",
+    wordObj.word
+  );
+  localData.state = "random";
   return pickRandom(ALL_TYPES);
 }
 
 /**
- * familarity = D 的逻辑（示例）
+ * familarity = D 的逻辑（完善后可根据具体需求调整）
  */
 function getQuestionForD(wordObj, localData) {
+  console.log(
+    "getQuestionForD: 当前state =",
+    localData.state,
+    "word =",
+    wordObj.word
+  );
+  localData.state = "random";
   return pickRandom(ALL_TYPES);
 }
 
 /**
- * 遍历 wordObj.myScore 中非 display 题型（展示次数>=10），返回最低正确率；若无，则返回 1。
+ * 统计 wordObj.myScore 中非 display 题型（展示次数>=10）的最低正确率，若无则返回 1
  */
 function getOverallCorrectRate(wordObj) {
   if (!wordObj.myScore) return 1;
@@ -299,7 +344,7 @@ function getOverallCorrectRate(wordObj) {
   let found = false;
   for (let key in wordObj.myScore) {
     if (key === "display") continue;
-    let data = wordObj.myScore[key]; // [展示次数, 正确次数, 正确率]
+    let data = wordObj.myScore[key];
     if (data[0] >= 10) {
       found = true;
       if (data[2] < minRate) {
@@ -311,7 +356,7 @@ function getOverallCorrectRate(wordObj) {
 }
 
 /**
- * 返回在 wordObj.myScore 中展示次数>=10的题型中正确率最低的题型，若无则返回 "display"
+ * 返回 wordObj.myScore 中展示次数>=10的题型中正确率最低的题型，若无则返回 "display"
  */
 function getHighestErrorType(wordObj) {
   if (!wordObj.myScore) return "display";
