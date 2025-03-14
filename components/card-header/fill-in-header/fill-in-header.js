@@ -241,7 +241,7 @@ class FillInHeader extends HTMLElement {
 
   getTemplate() {
     if (!this.word)
-      return `<div class="fill-in-header-container">No Word Provided</div>`;
+      return `<div class="fill-in-header-wrapper">No Word Provided</div>`;
 
     let lettersHtml = "";
     for (let i = 0; i < this.letterBlocks.length; i++) {
@@ -317,7 +317,7 @@ class FillInHeader extends HTMLElement {
     `;
 
     return `
-      <div class="fill-in-header-container">
+      <div class="fill-in-header-wrapper">
         <div class="question-block">
           ${questionLine}
         </div>

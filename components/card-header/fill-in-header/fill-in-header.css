@@ -2,11 +2,14 @@
 
 /* Overall container for the fill-in header */
 .fill-in-header-container {
+  padding: 20px 20px 0px;
+}
+
+.fill-in-header-wrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 16px;
-  padding-top: 20px;
 }
 
 /* Question block: contains the question line (letters and submit button) */
