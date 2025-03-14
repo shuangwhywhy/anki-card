@@ -169,12 +169,20 @@
   color: #42a5f5;
 }
 
-.synonyms-row {
+.s-row {
+  align-items: flex-start;
   display: inline-flex;
-  align-items: center;
   gap: 8px;
-  margin-top: 24px;
   text-align: left;
+  line-height: 1.1;
+}
+
+.s-row>span:first-child {
+  flex-shrink: 0;
+}
+
+.synonyms-row {
+  margin-top: 24px;
 }
 
 .synonyms-label {
@@ -187,12 +195,7 @@
   color: #388e3c;
 }
 
-.antonyms-row {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  text-align: left;
-}
+.antonyms-row {}
 
 .antonyms-label {
   font-weight: bold;

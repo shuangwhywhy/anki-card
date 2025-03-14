@@ -257,7 +257,7 @@ class AnkiCard extends HTMLElement {
           </div>
           ${
             cur.synonym && cur.synonym.length > 0
-              ? `<div class="synonyms-row">
+              ? `<div class="synonyms-row s-row">
                  <span class="synonyms-label">近义词：</span>
                  <span class="synonyms">${cur.synonym.join(", ")}</span>
                </div>`
@@ -265,7 +265,7 @@ class AnkiCard extends HTMLElement {
           }
           ${
             cur.antonym && cur.antonym.length > 0
-              ? `<div class="antonyms-row">
+              ? `<div class="antonyms-row s-row">
                  <span class="antonyms-label">反义词：</span>
                  <span class="antonyms">${cur.antonym.join(", ")}</span>
                </div>`
