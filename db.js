@@ -462,7 +462,7 @@ export async function getRandomVocabulary(limit = 50) {
           currentIndex++;
           cursor.continue();
         } else {
-          resolve(results);
+          resolve(results.sort(() => (Math.random() < 0.5 ? -1 : 1)));
         }
       };
       cursorReq.onerror = (e) => reject(e.target.error);
