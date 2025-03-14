@@ -149,35 +149,29 @@ class AnkiCard extends HTMLElement {
     }
   }
 
-  setData(data) {
-    if (data && Array.isArray(data.vocabulary)) {
-      this.stateProxy.vocabulary = data.vocabulary;
-      this.stateProxy.currentIndex = 0;
-      if (data.vocabulary[0].sentences?.length) {
-        this._currentExample = data.vocabulary[0].sentences[0] || "";
-      }
-      console.log(
-        "anki-card setData => array, length =",
-        data.vocabulary.length
-      );
-    } else if (data && data.word) {
-      this.stateProxy.vocabulary = [data];
-      this.stateProxy.currentIndex = 0;
-      if (data.sentences?.length) {
-        this._currentExample = data.sentences[0];
-      }
-      console.log("anki-card setData => single word object");
-    } else {
-      this.stateProxy.vocabulary = [];
-      this.stateProxy.currentIndex = 0;
-      this._currentExample = "";
-      console.warn("anki-card setData => no valid data");
-    }
-    const cur = this._vocabulary[this._currentIndex];
+  setCardWord(index) {
+    this.stateProxy.currentIndex = index;
+    this._questionType = null;
+    const cur = this._vocabulary[index];
     if (cur && cur.word) {
       localStorage.setItem(cur.word, JSON.stringify({ state: "init" }));
       this._questionType = getNextQuestionType(cur, false);
     }
+    if (cur.sentences?.length) {
+      this._currentExample = cur.sentences[0] || "";
+    }
+  }
+
+  setData(data) {
+    if (data && Array.isArray(data.vocabulary)) {
+      this.stateProxy.vocabulary = data.vocabulary;
+    } else if (data && data.word) {
+      this.stateProxy.vocabulary = [data];
+    } else {
+      this.stateProxy.vocabulary = [];
+    }
+    console.log("anki-card setData => array", this._vocabulary);
+    this.setCardWord(0);
     this.render();
   }
 
@@ -448,52 +442,39 @@ class AnkiCard extends HTMLElement {
     }, 500);
   }
 
-  async showPrev() {
+  async changeCard(index, direction) {
     if (this._vocabulary.length <= 1) return;
     await this._flushDisplayDuration();
     this._updateMyScoreDisplayDebounced();
     const cardEl = this._contentContainer.querySelector(".card-container");
     if (cardEl) {
       cardEl.style.transition = "transform 0.3s ease";
-      cardEl.style.transform = "rotateY(90deg)";
+      cardEl.style.transform = `rotateY(${direction > 0 ? "" : "-"}90deg)`;
       setTimeout(() => {
-        this.stateProxy.currentIndex =
-          (this._currentIndex - 1 + this._vocabulary.length) %
-          this._vocabulary.length;
-        this._questionType = null;
+        this.setCardWord(index);
         this.render();
         cardEl.style.transform = "rotateY(0deg)";
       }, 150);
     } else {
-      this.stateProxy.currentIndex =
-        (this._currentIndex - 1 + this._vocabulary.length) %
-        this._vocabulary.length;
-      this._questionType = null;
+      this.setCardWord(index);
       this.render();
     }
   }
 
+  async showPrev() {
+    await this.changeCard(
+      (this._currentIndex - 1 + this._vocabulary.length) %
+        this._vocabulary.length,
+      -1
+    );
+  }
+
   async showNext() {
-    if (this._vocabulary.length <= 1) return;
-    await this._flushDisplayDuration();
-    this._updateMyScoreDisplayDebounced();
-    const cardEl = this._contentContainer.querySelector(".card-container");
-    if (cardEl) {
-      cardEl.style.transition = "transform 0.3s ease";
-      cardEl.style.transform = "rotateY(90deg)";
-      setTimeout(() => {
-        this.stateProxy.currentIndex =
-          (this._currentIndex + 1) % this._vocabulary.length;
-        this._questionType = null;
-        this.render();
-        cardEl.style.transform = "rotateY(0deg)";
-      }, 150);
-    } else {
-      this.stateProxy.currentIndex =
-        (this._currentIndex + 1) % this._vocabulary.length;
-      this._questionType = null;
-      this.render();
-    }
+    await this.changeCard(
+      (this._currentIndex + 1 + this._vocabulary.length) %
+        this._vocabulary.length,
+      1
+    );
   }
 
   async _handleRecordAnswer(e) {

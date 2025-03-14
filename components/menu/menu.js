@@ -76,10 +76,12 @@ class CustomMenu extends HTMLElement {
     });
     clearBtn.addEventListener("click", () => {
       if (confirm("确定要清空所有词汇吗？")) {
-        // 直接调用删除所有词汇的接口
+        // 调用 db.js 的删除接口，同时清空 localStorage 中与词汇相关的记录
         deleteAllVocabulary()
           .then(() => {
             console.log("所有词汇已删除");
+            // 清空 localStorage 中所有存储的词汇状态记录
+            clearVocabularyLocalStorage();
             this.dispatchEvent(
               new CustomEvent("vocabCleared", {
                 bubbles: true,
@@ -92,6 +94,21 @@ class CustomMenu extends HTMLElement {
           });
       }
     });
+  }
+}
+
+function clearVocabularyLocalStorage() {
+  // 遍历 localStorage 的所有键，如果该键对应的值为 JSON 对象且含 state 属性，则删除
+  for (let i = localStorage.length - 1; i >= 0; i--) {
+    const key = localStorage.key(i);
+    try {
+      const val = JSON.parse(localStorage.getItem(key));
+      if (val && typeof val === "object" && val.hasOwnProperty("state")) {
+        localStorage.removeItem(key);
+      }
+    } catch (e) {
+      // 非 JSON 格式，跳过
+    }
   }
 }
 

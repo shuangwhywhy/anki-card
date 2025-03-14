@@ -197,7 +197,7 @@ function shuffle(arr) {
 }
 
 /* ==================================================
-   以下为题型选择逻辑函数，基于 state 逻辑实现
+   以下为题型选择逻辑函数（基于 state 逻辑，实现最终完整版本）
    ================================================== */
 
 /**
@@ -246,7 +246,7 @@ export function getNextQuestionType(wordObj, isRefresh = false) {
 }
 
 /**
- * familarity = A 逻辑：
+ * familarity = A 的逻辑：
  * 1. 如果 state 为 "init"，则将 state 设为 "nextup"，返回 "display"（首刷默认）
  * 2. 如果 state 为 "nextup" 且整体正确率（仅统计展示次数>=10）小于 0.2，则将 state 设为 "again"，返回 "display"（触发次刷）
  * 3. 如果 state 为 "again"，则设为 "random"，返回错误率最高的题型
@@ -261,7 +261,7 @@ function getQuestionForA(wordObj, localData) {
       console.log("getQuestionForA: state从init转换到nextup");
       ret = "display";
       console.log("getQuestionForA: 首刷返回display");
-    // 无 break，继续进入 nextup
+    // 不 break，继续进入 nextup 判断
     case "nextup":
       console.log(
         "getQuestionForA: 进入nextup判断, overallCorrectRate =",
@@ -284,7 +284,7 @@ function getQuestionForA(wordObj, localData) {
     case "again":
       localData.state = "random";
       console.log(
-        "getQuestionForA: state为again，转换为random, 返回错误率最高的题型"
+        "getQuestionForA: state为again, 转换为random, 返回错误率最高的题型"
       );
       return getHighestErrorType(wordObj);
     default:
@@ -294,45 +294,227 @@ function getQuestionForA(wordObj, localData) {
 }
 
 /**
- * familarity = B 的逻辑（完善后可根据具体需求调整）
+ * familarity = B 的逻辑：
+ * - 当展示次数 < 3 且 时长 < 2 分钟，首刷题型为 display；
+ * - 当展示次数 < 6 且 时长 < 4 分钟，首刷题型在非 display 题型中加权随机选择（display 概率保持在 5% 以下）；
+ * - 当整体正确率 < 20%（展示次数>=10的题型），次刷题型为 display；
+ * - 当 state 为 "again" 时，转换为 "random" 并返回错误率最高的题型。
  */
 function getQuestionForB(wordObj, localData) {
-  console.log(
-    "getQuestionForB: 当前state =",
-    localData.state,
-    "word =",
-    wordObj.word
-  );
-  localData.state = "random";
-  return pickRandom(ALL_TYPES);
+  let ret = null;
+  console.log("getQuestionForB: 初始state =", localData.state);
+  switch (localData.state) {
+    case "init":
+      if (wordObj.showCount < 3 && wordObj.displayDuration < 2 * 60 * 1000) {
+        localData.state = "nextup";
+        ret = "display";
+        console.log(
+          "getQuestionForB: 条件1满足（<3 & <2min），state转换为nextup, 返回display"
+        );
+      } else if (
+        wordObj.showCount < 6 &&
+        wordObj.displayDuration < 4 * 60 * 1000
+      ) {
+        localData.state = "nextup";
+        ret = getWeightedRandomNonDisplay(0.05);
+        console.log(
+          "getQuestionForB: 条件2满足（<6 & <4min），state转换为nextup, 返回非display =",
+          ret
+        );
+      }
+    // 不 break，进入 nextup 判断
+    case "nextup":
+      console.log(
+        "getQuestionForB: 进入nextup判断, overallCorrectRate =",
+        getOverallCorrectRate(wordObj)
+      );
+      if (getOverallCorrectRate(wordObj) < 0.2) {
+        localData.state = "again";
+        ret = "display";
+        console.log(
+          "getQuestionForB: overallCorrectRate < 0.2, state转换为again, 返回display"
+        );
+        return ret;
+      }
+      if (ret) {
+        console.log("getQuestionForB: nextup阶段返回ret =", ret);
+        return ret;
+      }
+      console.log(
+        "getQuestionForB: nextup阶段未命中条件，返回加权非display（display概率<5%）"
+      );
+      return getWeightedRandomNonDisplay(0.05);
+    case "again":
+      localData.state = "random";
+      console.log(
+        "getQuestionForB: state为again, 转换为random, 返回错误率最高的题型"
+      );
+      return getHighestErrorType(wordObj);
+    default:
+      console.log("getQuestionForB: 默认返回加权非display（display概率<5%）");
+      return getWeightedRandomNonDisplay(0.05);
+  }
 }
 
 /**
- * familarity = C 的逻辑（完善后可根据具体需求调整）
+ * familarity = C 的逻辑：
+ * - 当展示次数 < 2 且 时长 < 1 分钟，首刷题型为 display；
+ * - 当展示次数 < 4 且 时长 < 2 分钟，首刷题型在非 display 题型中加权随机选择（display概率保持在 3%以下）；
+ * - 当整体正确率 < 20%（展示次数>=10），次刷题型为 display；
+ * - 当 state 为 "again" 时，转换为 "random" 并返回错误率最高的题型。
  */
 function getQuestionForC(wordObj, localData) {
-  console.log(
-    "getQuestionForC: 当前state =",
-    localData.state,
-    "word =",
-    wordObj.word
-  );
-  localData.state = "random";
-  return pickRandom(ALL_TYPES);
+  let ret = null;
+  console.log("getQuestionForC: 初始state =", localData.state);
+  switch (localData.state) {
+    case "init":
+      if (wordObj.showCount < 2 && wordObj.displayDuration < 1 * 60 * 1000) {
+        localData.state = "nextup";
+        ret = "display";
+        console.log(
+          "getQuestionForC: 条件1满足（<2 & <1min），state转换为nextup, 返回display"
+        );
+      } else if (
+        wordObj.showCount < 4 &&
+        wordObj.displayDuration < 2 * 60 * 1000
+      ) {
+        localData.state = "nextup";
+        ret = getWeightedRandomNonDisplay(0.03);
+        console.log(
+          "getQuestionForC: 条件2满足（<4 & <2min），state转换为nextup, 返回非display =",
+          ret
+        );
+      }
+    // 不 break，进入 nextup
+    case "nextup":
+      console.log(
+        "getQuestionForC: 进入nextup判断, overallCorrectRate =",
+        getOverallCorrectRate(wordObj)
+      );
+      if (getOverallCorrectRate(wordObj) < 0.2) {
+        localData.state = "again";
+        ret = "display";
+        console.log(
+          "getQuestionForC: overallCorrectRate < 0.2, state转换为again, 返回display"
+        );
+        return ret;
+      }
+      if (ret) {
+        console.log("getQuestionForC: nextup阶段返回ret =", ret);
+        return ret;
+      }
+      console.log(
+        "getQuestionForC: nextup阶段未命中条件，返回加权非display（display概率<3%）"
+      );
+      return getWeightedRandomNonDisplay(0.03);
+    case "again":
+      localData.state = "random";
+      console.log(
+        "getQuestionForC: state为again, 转换为random, 返回错误率最高的题型"
+      );
+      return getHighestErrorType(wordObj);
+    default:
+      console.log("getQuestionForC: 默认返回加权非display（display概率<3%）");
+      return getWeightedRandomNonDisplay(0.03);
+  }
 }
 
 /**
- * familarity = D 的逻辑（完善后可根据具体需求调整）
+ * familarity = D 的逻辑：
+ * - 当展示次数 < 1 且 时长 < 30 秒，首刷题型为 display；
+ * - 当展示次数 < 10 且 时长 < 5 分钟，首刷题型必须为 fill-in；
+ * - 当整体正确率 < 20%（展示次数>=10），次刷题型为 display；
+ * - 当 state 为 "again" 时，转换为 "random" 并返回错误率最高的题型；
+ * - 其他情况下，返回加权随机结果：display 概率 < 1%，fill-in 概率 40%，其他随机。
  */
 function getQuestionForD(wordObj, localData) {
-  console.log(
-    "getQuestionForD: 当前state =",
-    localData.state,
-    "word =",
-    wordObj.word
-  );
-  localData.state = "random";
-  return pickRandom(ALL_TYPES);
+  let ret = null;
+  console.log("getQuestionForD: 初始state =", localData.state);
+  switch (localData.state) {
+    case "init":
+      if (wordObj.showCount < 1 && wordObj.displayDuration < 30 * 1000) {
+        localData.state = "nextup";
+        ret = "display";
+        console.log(
+          "getQuestionForD: 条件1满足（<1 & <30s），state转换为nextup, 返回display"
+        );
+      } else if (
+        wordObj.showCount < 10 &&
+        wordObj.displayDuration < 5 * 60 * 1000
+      ) {
+        localData.state = "nextup";
+        ret = "fill-in";
+        console.log(
+          "getQuestionForD: 条件2满足（<10 & <5min），state转换为nextup, 返回fill-in"
+        );
+      }
+    // 不 break，进入 nextup
+    case "nextup":
+      console.log(
+        "getQuestionForD: 进入nextup判断, overallCorrectRate =",
+        getOverallCorrectRate(wordObj)
+      );
+      if (getOverallCorrectRate(wordObj) < 0.2) {
+        localData.state = "again";
+        ret = "display";
+        console.log(
+          "getQuestionForD: overallCorrectRate < 0.2, state转换为again, 返回display"
+        );
+        return ret;
+      }
+      if (ret) {
+        console.log("getQuestionForD: nextup阶段返回ret =", ret);
+        return ret;
+      }
+      console.log("getQuestionForD: nextup阶段未命中条件，返回加权随机结果");
+      return getWeightedRandomForD();
+    case "again":
+      localData.state = "random";
+      console.log(
+        "getQuestionForD: state为again, 转换为random, 返回错误率最高的题型"
+      );
+      return getHighestErrorType(wordObj);
+    default:
+      console.log("getQuestionForD: 默认返回加权随机结果");
+      return getWeightedRandomForD();
+  }
+}
+
+/**
+ * 返回一个非 display 的随机题型，
+ * 参数 maxDisplayProb 指定 display 类型最大出现概率，剩余返回其他类型。
+ */
+function getWeightedRandomNonDisplay(maxDisplayProb) {
+  const chance = Math.random();
+  if (chance < maxDisplayProb) {
+    console.log("getWeightedRandomNonDisplay: 随机命中，返回 display");
+    return "display";
+  } else {
+    const nonDisplay = ALL_TYPES.filter((t) => t !== "display");
+    const res = pickRandom(nonDisplay);
+    console.log("getWeightedRandomNonDisplay: 返回非display类型 =", res);
+    return res;
+  }
+}
+
+/**
+ * 针对 familarity = D 的加权随机：
+ * display 概率 < 1%，fill-in 概率 40%，其他随机。
+ */
+function getWeightedRandomForD() {
+  const chance = Math.random();
+  if (chance < 0.01) {
+    console.log("getWeightedRandomForD: 随机命中，返回 display (<1%)");
+    return "display";
+  } else if (chance < 0.01 + 0.4) {
+    console.log("getWeightedRandomForD: 随机命中，返回 fill-in (40%)");
+    return "fill-in";
+  } else {
+    const others = ALL_TYPES.filter((t) => t !== "display" && t !== "fill-in");
+    const res = pickRandom(others);
+    console.log("getWeightedRandomForD: 返回其他题型 =", res);
+    return res;
+  }
 }
 
 /**
@@ -344,7 +526,7 @@ function getOverallCorrectRate(wordObj) {
   let found = false;
   for (let key in wordObj.myScore) {
     if (key === "display") continue;
-    let data = wordObj.myScore[key];
+    let data = wordObj.myScore[key]; // [count, correct, rate]
     if (data[0] >= 10) {
       found = true;
       if (data[2] < minRate) {
