@@ -2,6 +2,14 @@
 import "../card-header/fill-in-header/fill-in-header.js";
 import "../card-header/display-header/display-header.js";
 import "../card-header/choice-header/choice-header.js";
+import "../../components/vocab-popup/vocab-popup.js"; // 引入弹窗组件
+import {
+  computeMasterySummary,
+  computeQuestionTypeStats,
+  computeTotalScore,
+  mapFamiliarity,
+  computeRates,
+} from "../../helpers/mastery.js";
 
 import {
   ALL_TYPES,
@@ -203,6 +211,14 @@ class AnkiCard extends HTMLElement {
       if (headerComp && typeof headerComp.setData === "function") {
         headerComp.setData(questionData);
       }
+    }
+    // 绑定弹窗事件，避免重复绑定
+    const cardContainer =
+      this._contentContainer.querySelector(".card-container");
+    if (cardContainer && !cardContainer._popupBound) {
+      cardContainer.addEventListener("mouseenter", this._showPopup.bind(this));
+      cardContainer.addEventListener("mouseleave", this._hidePopup.bind(this));
+      cardContainer._popupBound = true;
     }
   }
 
@@ -527,6 +543,48 @@ class AnkiCard extends HTMLElement {
         "\nRecord详细信息：" + JSON.stringify(record)
       );
       throw err;
+    }
+  }
+
+  // 修改后的 _showPopup：全局只留一个 popup，通过 CSS 控制隐藏显示
+  _showPopup(e) {
+    const cur = this._vocabulary[this._currentIndex];
+    if (!cur) return;
+    const masterySummary = computeMasterySummary(cur);
+    const totalScore = computeTotalScore(cur);
+    const stats = computeQuestionTypeStats(cur);
+    const mappedFamiliarity = mapFamiliarity(cur.familiarity);
+    const rates = computeRates(cur);
+    const popupData = {
+      mappedFamiliarity,
+      showCount: cur.showCount || 0,
+      displayDuration: cur.displayDuration || 0,
+      masterySummary: masterySummary,
+      totalScore: totalScore,
+      bestType: stats.best,
+      worstType: stats.worst,
+      rates: rates,
+    };
+    if (this._popupElement) {
+      // 更新已有 popup 数据，并确保其显示
+      this._popupElement.setData(popupData);
+      this._popupElement.classList.remove("hidden-popup");
+    } else {
+      const popup = document.createElement("vocab-popup");
+      popup.setData(popupData);
+      popup.style.position = "absolute";
+      popup.style.top = "10px";
+      const containerRect = this._contentContainer.getBoundingClientRect();
+      popup.style.left = containerRect.width + 10 + "px";
+      this._contentContainer.appendChild(popup);
+      this._popupElement = popup;
+    }
+  }
+
+  _hidePopup(e) {
+    if (this._popupElement) {
+      // 不删除 popup，而是通过 CSS 隐藏
+      this._popupElement.classList.add("hidden-popup");
     }
   }
 }
