@@ -12,7 +12,6 @@ import {
   updateShowCount,
   updateDisplayDuration,
   addHistoryRecord,
-  addVocabulary,
   updateMyScore,
   updateMyScoreDisplay,
 } from "../../db.js";
@@ -80,10 +79,6 @@ class AnkiCard extends HTMLElement {
                 const elapsed = Date.now() - this.displayTimer.startTime;
                 this.displayTimer.accumulatedTime += elapsed;
                 this.displayTimer.startTime = null;
-                console.log(
-                  "[anki] displayTimer",
-                  JSON.stringify(this.displayTimer)
-                );
               }
             }
             target[prop] = value;
@@ -176,7 +171,13 @@ class AnkiCard extends HTMLElement {
   }
 
   render() {
-    this._contentContainer.innerHTML = this.getTemplate();
+    let container = this._contentContainer.querySelector(".card-container");
+    if (!container) {
+      container = document.createElement("div");
+      container.className = "card-container";
+      this._contentContainer.replaceChildren(container);
+    }
+    container.innerHTML = this.getTemplate();
     this._detailsSection =
       this._contentContainer.querySelector("#details-section");
     this._updateFontSizeProperty();
@@ -207,7 +208,7 @@ class AnkiCard extends HTMLElement {
 
   getTemplate() {
     if (!this._vocabulary.length) {
-      return `<div class="card-container">No Data</div>`;
+      return `<span>No Data</span>`;
     }
     const cur = this._vocabulary[this._currentIndex];
     const posMapping = {
@@ -233,54 +234,52 @@ class AnkiCard extends HTMLElement {
            <polyline points="6 9 12 15 18 9" stroke="white" stroke-width="2" fill="none"/>
          </svg>`;
     return `
-      <div class="card-container">
-        <div class="card-header">
-          ${headerTemplate}
+      <div class="card-header">
+        ${headerTemplate}
+      </div>
+      <div class="card-refresh-btn" id="refresh-btn">
+        <div class="icon">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 4V1L8 5l4 4V6a6 6 0 016 6 6 6 0 01-6 6 6 6 0 01-5.65-4H4.26A8 8 0 0012 20a8 8 0 000-16z"/>
+          </svg>
         </div>
-        <div class="card-refresh-btn" id="refresh-btn">
-          <div class="icon">
-            <svg viewBox="0 0 24 24">
-              <path d="M12 4V1L8 5l4 4V6a6 6 0 016 6 6 6 0 01-6 6 6 6 0 01-5.65-4H4.26A8 8 0 0012 20a8 8 0 000-16z"/>
-            </svg>
-          </div>
+      </div>
+      <div id="details-section" class="details-section ${detailsClass}">
+        <div class="detail-row inline">
+          <span class="phonetic">${cur.phonetic || ""}</span>
+          <span class="pos">${posAbbrev}</span>
         </div>
-        <div id="details-section" class="details-section ${detailsClass}">
-          <div class="detail-row inline">
-            <span class="phonetic">${cur.phonetic || ""}</span>
-            <span class="pos">${posAbbrev}</span>
-          </div>
-          <div class="detail-row definition-cn">
-            ${cur.chineseDefinition || ""}
-          </div>
-          <div class="detail-row definition-en">
-            ${cur.englishDefinition || ""}
-          </div>
-          ${
-            cur.synonym && cur.synonym.length > 0
-              ? `<div class="synonyms-row s-row">
-                 <span class="synonyms-label">近义词：</span>
-                 <span class="synonyms">${cur.synonym.join(", ")}</span>
-               </div>`
-              : ""
-          }
-          ${
-            cur.antonym && cur.antonym.length > 0
-              ? `<div class="antonyms-row s-row">
-                 <span class="antonyms-label">反义词：</span>
-                 <span class="antonyms">${cur.antonym.join(", ")}</span>
-               </div>`
-              : ""
-          }
-          <div class="examples">
-            <div class="label">例句（点击切换）：</div>
-            <div class="example-sentence">${this._currentExample}</div>
-          </div>
+        <div class="detail-row definition-cn">
+          ${cur.chineseDefinition || ""}
         </div>
-        <div class="expand-more" id="expandMoreArea">
-          <div class="expand-line"></div>
-          <div class="expand-arrow">
-            ${toggleArrowSVG}
-          </div>
+        <div class="detail-row definition-en">
+          ${cur.englishDefinition || ""}
+        </div>
+        ${
+          cur.synonym && cur.synonym.length > 0
+            ? `<div class="synonyms-row s-row">
+                <span class="synonyms-label">近义词：</span>
+                <span class="synonyms">${cur.synonym.join(", ")}</span>
+              </div>`
+            : ""
+        }
+        ${
+          cur.antonym && cur.antonym.length > 0
+            ? `<div class="antonyms-row s-row">
+                <span class="antonyms-label">反义词：</span>
+                <span class="antonyms">${cur.antonym.join(", ")}</span>
+              </div>`
+            : ""
+        }
+        <div class="examples">
+          <div class="label">例句（点击切换）：</div>
+          <div class="example-sentence">${this._currentExample}</div>
+        </div>
+      </div>
+      <div class="expand-more" id="expandMoreArea">
+        <div class="expand-line"></div>
+        <div class="expand-arrow">
+          ${toggleArrowSVG}
         </div>
       </div>
     `;
@@ -448,17 +447,18 @@ class AnkiCard extends HTMLElement {
     this._updateMyScoreDisplayDebounced();
     const cardEl = this._contentContainer.querySelector(".card-container");
     if (cardEl) {
-      cardEl.style.transition = "transform 0.3s ease";
-      cardEl.style.transform = `rotateY(${direction > 0 ? "" : "-"}90deg)`;
+      this._contentContainer.className = "card-wrapper flip-out";
       setTimeout(() => {
         this.setCardWord(index);
         this.render();
-        cardEl.style.transform = "rotateY(0deg)";
-      }, 150);
-    } else {
-      this.setCardWord(index);
-      this.render();
+        setTimeout(() => {
+          this._contentContainer.className = "card-wrapper";
+        }, 500);
+      }, 500);
+      return;
     }
+    this.setCardWord(index);
+    this.render();
   }
 
   async showPrev() {
